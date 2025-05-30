@@ -1,0 +1,542 @@
+\documentclass[acmtog, anonymous]{acmart}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyvrb}
+
+\title{Interface design with SMT solvers: A study}
+
+\author{undisclosed author/s}
+\author{Facundo Domínguez}
+\affiliation{
+     \institution{Tweag}
+     \country{Uruguay}
+}
+\email{facundo.dominguez@tweag.io}
+\author{Arnaud Spiwack}
+\affiliation{
+     \institution{Tweag}
+     \country{Japan}
+}
+\email{arnaud.spiwack@tweag.io}
+\keywords{refinement types, SMT solvers, formal verification}
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10003752.10010124.10010138.10010142</concept_id>
+       <concept_desc>Theory of computation~Program verification</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10003752.10010124.10010138.10010140</concept_id>
+       <concept_desc>Theory of computation~Program specifications</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Theory of computation~Program verification}
+\ccsdesc[500]{Theory of computation~Program specifications}
+
+\newcommand{\tc}[1]{\texttt{#1}}
+\newcommand{\codeblocksize}{\fontsize{6.5}{9}\selectfont}
+\newcommand{\sourcefile}[1]{\anon[#1 (in accompanying zip file)]{{\scriptsize\url{https://github.com/facundominguez/liquidhaskell/blob/fd/rapier/tests/rapier/#1}}}}
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{
+    fontsize=\codeblocksize,
+}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+Application programming interfaces (APIs) in programming languages are described
+with the types of their operations and additional documentation expressed by
+other means than the programming language itself.
+
+In strongly typed languages, the author of an interface can aim to enrich the
+types to represent most of the constraints and relationships between the
+operations, or she could decide to keep the types as simple as possible.
+
+The advantage of rich types is that the type checker is involved in detecting
+misuse of the interface, thus preventing execution failures or returning
+incorrect results. But the enrichment always comes at the cost of more
+complexity in the usage of the interface, which in the extreme can make the
+interface too difficult to use as well. The author is then forced into a
+balancing act.
+
+The options are not just to lean or not to lean on the type checker, though. In
+this paper we analyze a couple of use cases in the Haskell programming language
+from the perspective of a third alternative. We verify the usage of interfaces
+with automated theorem provers, more specifically, SMT solvers. And we connect
+SMT solvers with Haskell by using refinement types as implemented in the Liquid
+Haskell verification tool.
+
+While SMT solvers have been intended to support programming since long, it has
+been less discussed how their integration through refinement types influences
+interface design. Therefore, our first contribution is a study of
+capture-avoiding substitution that we verify with Liquid Haskell, where we
+compare with an earlier attempt based on the Haskell type checker and known as
+\textit{the foil}~\cite{maclaurin2022foil}
+(Section~\ref{capture-avoiding-substitution}). Later on, we verify an
+implementation of unification (Section~\ref{unification}), a more demanding
+example where extending earlier approaches would be some challenge. Lastly, we
+assess the limitations of both the Liquid Haskell implementation and the general
+approach of integrating SMT solvers via refinement types. In a nutshell, we
+anticipate many scenarios where the integration of SMT solvers makes programming
+more pleasant and static checks more powerful.
+
+
+\section{Capture-avoiding substitutions}
+\label{capture-avoiding-substitution}
+
+Name capture is recognized as one of the most common mistakes when writing compilers.
+A way to make it happen is when substituting under binders like in
+$(\lambda x. y)[y:=t]$. The result of the substitution is $\lambda x. t$.
+Thus $(\lambda x. y)[y:=z]$ is $\lambda x. z$, and after the substitution
+we still have a function that returns a constant value. But if we substitute
+as in $(\lambda z. y)[y:=z]$, we obtain $\lambda z. z$, the identity function!
+This change of meaning is often unwanted and is caused by the binder capturing
+free variables in $t$.
+
+Avoiding name captures efficiently is the subject of a few approaches. One of them,
+called \textit{the rapier}, is used in the GHC compiler. The rapier requires the
+implementation of substitutions to carry an additional \textit{scope} set containing all the
+variables that appear free in the result of the substitution. This set is
+used both to decide what to rename a binder to, in order to avoid name capture,
+and it is also used to skip renaming a binder if it wouldn't capture any free
+variables. Figure~\ref{rapier-style-substitution} shows an implementation of the
+technique on the untyped lambda calculus.
+
+\begin{figure}
+\begin{verbatim}
+data Exp = Var Int | App Exp Exp | Lam Int Exp
+
+substitute :: Set Int -> Subst Exp -> Exp -> Exp
+substitute scope s e0 = case e0 of
+  Var i -> case lookupSubst i s of Nothing -> e0; Just e -> e
+  App e0 e1 -> App (substitute scope s e0) (substitute scope s e1)
+  Lam i e
+    | member i scope,
+      let j = freshVar scope ->
+        Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
+    | otherwise ->
+        Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+
+freshVar :: Set Int -> Int
+freshVar s = case lookupMax s of Nothing -> 0; Just i -> i + 1
+\end{verbatim}
+\caption{Rapier style substitution}
+\Description{Haskell implementation of substitution for untyped lambda terms using the rapier}
+\label{rapier-style-substitution}
+\end{figure}
+
+\subsection{The rapier with stronger types}
+\label{the-rapier-with-stronger-types}
+
+MacLaurin et al. go over the merits and difficulties of the rapier. In
+particular, a few requirements need to be respected when implementing it, or
+software faults ensue. Here is a recollection of the requirements in question:
+\begin{enumerate}
+\item Membership to the scope set needs to be tested for every binder encountered
+      during the substitution traversal, and the binders need to be renamed if
+      they are in the set.
+\item The scope set needs to be constructed correctly before starting a substitution.
+      It should contain all of the variables in the result of the substitution,
+      and it can also be a superset of those. Since we don't have the result of
+      the substitution yet, we turn to specify it in terms of the inputs as well.
+      \begin{enumerate}
+      \item The scope set needs to include all the variables free in the input
+            lambda expression. Otherwise, renaming a variable could accidentally
+            capture a free variable. The only exception to this rule are the
+            variables that also happen to be in the domain of the substitution
+            (binders that capture them don't need to be renamed since the substitution
+            will replace occurrences of those free variables).
+      \item The scope set needs to include all the variables free in the range
+            of the substitution.
+      \end{enumerate}
+\item Binders need to be added to the scope set whenever they are encountered,
+      so further attempts to rename other binders don't capture them.
+\item When renaming a binder, the new name must be guaranteed to not belong to
+      the scope set.
+\item When renaming a binder, the occurrences of the old bound variable need to be
+      substituted with the new name.
+\item The binders need to be removed from the domain of the substitution when
+      they are not in the scope set, otherwise the substitution will happily
+      replace occurrences of those bound variables! An alternative we use in
+      Figure~\ref{rapier-style-substitution} is to redefine the substitution to
+      map the variable of the binder to itself.
+\end{enumerate}
+
+In an approach dubbed \textit{The foil}, MacLaurin et al. propose to use the type
+checker to ensure most of these
+requirements, thus reducing the chance of programmer mistakes. They
+propose a library with types \tc{Scope n}, \tc{Name n}, and
+\tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
+the type index \tc{n} identifies the set. A value of type \tc{Name n} is a name that
+belongs to the set with type \tc{Scope n}. A value of type \tc{NameBinder n l} is
+a name in the set with type \tc{Scope l} which results from adding such single
+name to the set with type \tc{Scope n}. These types are meant to be used in
+the abstract syntax tree of a client application. For instance
+
+\begin{quotation}
+\begin{verbatim}
+data Exp n = Var (Name n)
+           | App (Exp n) (Exp n)
+           | forall l. Lam (NameBinder n l) (Exp l)
+\end{verbatim}
+\end{quotation}
+
+Then the operations and type checking on the new types will guide the user into
+respecting much of the scope requirements when implementing substitution.
+
+\begin{verbatim}
+substitute :: Distinct o => Scope o -> Subst Expr i o -> Expr i -> Expr o
+\end{verbatim}
+
+This type signature says that no names shadow each other in the scope set \tc{o}.
+It also says that the substitution will take a expression with free variables in
+a scope set \tc{i} and produce an expression with free variables in a scope set
+\tc{o}.
+
+There
+are mechanisms to check that a scope set is a subset of another, to assert that no
+name shadows another one in a given scope set, to reason that expressions
+with free variables in one scope (\tc{Exp n}) can be coerced to expressions with
+free variables in a superset (\tc{Exp l}), and to introduce scope sets that extend
+others with freshly created names. They also provide an implementation of maps of
+variables to expressions, that is the substitutions to apply, with an interface
+that uses the new types as well.
+
+With these measures, the foil is able to address the above requirements except the
+last one, which must be handled carefully in the unsafe part of their API. This
+is not discussed in their publication, but it can be handled in their \tc{addRename}
+function.\footnote{Compare the function \tc{addRename} in the publication with this implementation of it:
+{\scriptsize\url{https://hackage.haskell.org/package/free-foil-0.2.0/docs/src/Control.Monad.Foil.Internal.html\#addRename}}}
+
+
+\subsection{The rapier with refinement types}
+\label{the-rapier-with-refinement-types}
+
+We set now to improve upon the rapier with Liquid Haskell. The code presented in
+this section is available as
+\tc{Subst4.hs}\footnote{The simplest approach with Liquid Haskell: \sourcefile{Subst4.hs}}
+in our repository. Liquid Haskell is a
+verification tool for Haskell programs. When given a program, the tool will
+check statically that the functions in the program respect formal specifications
+provided by the programmer. Liquid Haskell doesn't implement all the reasoning
+directly. Instead, it will generate logical assertions or constraints from the
+abstract syntax tree of the program, that it will then feed to an SMT solver.
+
+Specifications, in turn, are given in a form of dependent types
+known as refinement types. A value has a refinement type $\{v:b\ |\ p\ v\}$ when
+it has a base type $b$, and it also satisfies predicate $p$. In Liquid Haskell,
+$p$ is a function returning a boolean value. Here's an example for the
+\tc{freshVar} function.
+
+\begin{verbatim}
+import Data.Set
+{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
+\end{verbatim}
+
+Liquid Haskell reads specifications from inside special Haskell comments
+\tc{\{-@ \ldots @-\}}. We will skip them in our snippets when redundant.
+The predicates in the refinement types are in a language of expressions
+referred to as the logic language. For the sake of this paper, we can
+regard it as a subset of Haskell. The predicates are assembled from
+functions in the Haskell program and functions that might be available
+only in the logic.
+A function like \tc{member}, which comes from the module \tc{Data.Set}
+in the \tc{containers} package, is linked by Liquid Haskell to the set
+theory of the SMT solver.
+
+Specifications starting with the \tc{assume} keyword declare that the
+corresponding Haskell function should meet the specification, but it isn't
+verified. When \tc{freshVar} is called in other functions, Liquid Haskell
+will assume that the returned variable is fresh whatever the implementation
+of \tc{freshVar} does. In contrast, Liquid Haskell is going to verify that
+the rapier implementation of Figure~\ref{rapier-style-substitution} meets the
+following specification of \tc{substitute}.
+
+\begin{verbatim}
+{-@
+type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S}
+
+substitute
+  :: scope:Set Int -> s:Subst (ScopedExp scope) -> ScopedExp (domain s)
+  -> ScopedExp scope
+@-}
+substitute :: Set Int -> Subst Exp -> Exp -> Exp
+\end{verbatim}
+
+We first define a type alias \tc{ScopeExp S}, that is the type of all
+expressions whose free variables are in the set \tc{S}.\footnote{In type aliases,
+Liquid Haskell expects parameter names to start with an uppercase letter.}
+Then we provide a type signature for the function \tc{substitute} using
+refinement types.
+
+Functions like \tc{isSubsetOf} and \tc{difference} come from the \tc{Data.\allowbreak Set}
+module. The function \tc{freeVars} is in the same module as \tc{subs\-ti\-tute},
+and collects the free variables of an expression. We note that this function
+is only used in specifications, and in particular, it is not evaluated when
+calling to \tc{substitute}.
+
+\begin{verbatim}
+freeVars :: Exp -> Set Int
+freeVars e = case e of
+  Var i -> singleton i
+  App e1 e2 -> union (freeVars e1) (freeVars e2)
+  Lam i e -> difference (freeVars e) (singleton i)
+\end{verbatim}
+
+Lastly there is the function \tc{domain} that is defined only in the logic
+language.
+
+\begin{verbatim}
+{-@ measure domain :: Subst e -> Set Int @-}
+\end{verbatim}
+
+This is the way in which uninterpreted functions are declared. The function
+\tc{domain} stands for the set of variables in the domain of a substitution.
+Liquid Haskel doesn't know anything more about it than its type signature,
+but the user can enrich such knowledge with the specifications of the substitution
+operations that manipulate the domain.
+
+\begin{verbatim}
+assume lookupSubst :: k:Int -> xs:Subst e
+  -> {m:Maybe e | isJust m == member k (domain xs) }
+
+assume extendSubst :: s:Subst a -> i:Int -> a
+  -> {v:_ | union (domain s) (singleton i) = domain v }
+\end{verbatim}
+
+Now, for instance, whenever Liquid Haskell encounters an application
+of the function \tc{lookupSubst}, it will assume that the key is in the domain
+of the substitution if the lookup succeeds.
+
+Our specification of \tc{substitute} follows the specification of MacLaurin et
+al.  to the letter. With these annotations, Liquid Haskell can ensure that the
+implementation of substitution in Figure~\ref{rapier-style-substitution} meets
+all of the requirements in Section~\ref{the-rapier-with-stronger-types}, except
+for the first requirement, which we discuss further in the next subsection.
+
+Liquid Haskell ensures the last requirement because the
+specification of the recursive call demands the free variables of the lambda
+body to be in the domain of the substitution. Since these free variables might
+contain the binder variable, the substitution is not accepted without extending
+it first. In contrast, the foil leaves this bit to be implemented in the unsafe
+part of their API, and that is why the omission slips despite of aiming for
+similar specifications.
+
+\subsection{Ensuring the scope set is checked}
+
+In the foil, the ability to check on the scope is an interplay of the types and the
+fact that the user is prevented from inserting a variable in a scope without
+also checking if the variable is in the scope already. Doing the same in Liquid
+Haskell would require the addition of the following function.
+
+\begin{verbatim}
+newtype Scope = UnsafeScope (Set Int)
+{-@
+withRefreshed :: s:Scope -> i:Int
+  -> {p:(Scope, Int) |
+       not (member (snd p) s) && fst p == union s (singleton (snd p))}
+@-}
+withRefreshed :: Scope -> Int -> (Scope, Int)
+withRefreshed (UnsafeScope s) i
+  | Set.member i s = let j = freshVar s in (UnsafeScope (insert j s), j)
+  | otherwise = (UnsafeScope (insert i s), i)
+\end{verbatim}
+
+The specification of the function captures the fact that the returned
+name is not in the input set \tc{s}, and that the returned set is an
+extension of the input. We also need to wrap our sets of names into a
+\tc{newtype} in order to hide the \tc{insert} operation from the programmer,
+otherwise she could accidentally omit using \tc{withRefreshed} to create
+new scope sets. This solution is available in the file
+\tc{Subst5.hs}\footnote{A solution that addresses all requirements: \sourcefile{Subst5.hs}}
+in our repository.
+
+Instead of introducing \tc{withRefreshed}, we could avoid
+modifying the types in the program by providing a more stringent specification for
+\tc{substitute}.
+
+\begin{verbatim}
+substitute
+  :: scope:Set Int -> s:Subst (ScopedExp scope) -> ei:ScopedExp (domain s)
+  -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
+\end{verbatim}
+
+In this specification we are spelling exactly what the expected free variables in the result are.
+We use in the specification a function \tc{freeVarsSubst} such that
+\tc{freeVarsSubst (freeVars e) s} computes the free variables in the range of the
+substitution \tc{s} that is actually used when applying it
+to the expression \tc{e}. We provide an example representation for substitutions and
+a schematic presentation of \tc{freeVarsSubst}, but in our implementation we
+are careful to keep the verification agnostic on the actual representation of
+substitutions.
+
+\begin{verbatim}
+newtype Subst e = Subst [(Int, e)]
+freeVarsSubst :: Set Int -> Subst Exp -> Set Int
+freeVarsSubst used (Subst []) = empty
+freeVarsSubst used (Subst ((i, e) : s)) =
+  | member i used = -- only take the first occurrence of i
+      union (freeVars e) (freeVarsSubst (difference used (singleton i)) s)
+  | otherwise = freeVarsSubst used (Subst s)
+\end{verbatim}
+
+Unless we rename all the binders unconditionally, it is no longer
+possible to ignore the scope set when going under binders since the calculation
+of free variables doesn't add up:
+If the name of the binder is in the free variables of the range of the substitution,
+it may show up in the free variables of the result, but leaving it unrenamed would
+cause the call to the function \tc{freeVars} in the expected return refinement type
+to disagree.
+
+Unfortunately, this specification is more laborious to verify, as
+\tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
+function. Each lemma requires writing a recursive function for Liquid Haskell to
+verify it, which is additional effort.
+
+\begin{verbatim}
+lemma_freeVarsSubst_sing :: i:_ -> s:_
+  -> { freeVarsSubst (singleton i) s == freeVarsMaybe (lookupSubst i s) }
+
+lemma_freeVarsSubst_union :: s1:_ -> s2:_ -> s:_
+  -> { freeVarsSubst (union s1 s2) s
+         == union (freeVarsSubst s1 s) (freeVarsSubst s2 s) }
+
+lemma_freeVarsSubst_extend
+  :: scope:_ -> used:_
+  -> i:_ -> {e:_ | Data.Set.null (intersection (freeVars e) scope)}
+  -> s:Subst (ScopedExp scope)
+  -> { freeVarsSubst (difference used (singleton i)) s ==
+       difference (freeVarsSubst used (extendSubst s i e)) (freeVars e)
+     }
+\end{verbatim}
+
+And then they need to be applied in the cases of \tc{substitute}.
+
+\begin{verbatim}
+substitute scope s e0 = case e0 of
+  Var i -> case lookupSubst i s of
+    Nothing -> e0
+    Just e -> e ? lemma_freeVarsSubst_sing i s
+  App e0 e1 ->
+    App (substitute scope s e0) (substitute scope s e1)
+      ? lemma_freeVarsSubst_union (freeVars e0) (freeVars e1) s
+  Lam i e
+    ...
+\end{verbatim}
+
+The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
+brings the lemma into consideration of Liquid Haskell when verifying the
+first argument without evaluating the recursive function that stands for
+the lemma proof. This solution is available in the file
+\tc{Subst3.hs}\footnote{A solution that addresses all requirements without changing types in the program: \sourcefile{Subst3.hs}}
+in our repository.
+
+
+\subsection{Comparison}
+
+Liquid Haskell can verify most of the requirements with little assistance
+because it is delegating much of the work to an underlying SMT solver.
+SMT solvers are tools that decide whether (usually first order) logic formulas are
+satisfiable and provide dedicated mechanisms to reason about various theories
+(sets, strings, arrays, integers, reals, etc).
+
+In the case of capture-avoiding substitution, multiple queries that
+Liquid Haskell gives to the SMT solver involve reasoning on sets, thus
+making effective use of its capabilities.
+
+On the other hand, an approach like the foil, that is based on reasoning
+with the type checker, needs to repurpose the type checker for the sake
+of reasoning about the theories at hand. Checking that a program is
+well typed is not quite the same thing as reasoning about the validity
+of first order logic statements. The difference shows in the amount of
+code that a supporting library for the foil needs to encode the statements,
+the translation of the solution to the implementation that uses such
+library, and the difficulties in adapting these artifacts when new
+statements are required.
+
+
+\section{Unification}
+\label{unification}
+
+In this section we look now at another example where we can put the set theory
+of SMT solvers to work for us. This is conditional unification as implemented
+in Figure~\ref{conditional-unification}.
+
+\begin{figure}
+\begin{verbatim}
+type Var = Int
+type SkolemApp = (Int, Subst Term)
+
+-- | A language of terms with variables, functions, and constants.
+data Term
+  = V Var
+  | SA SkolemApp
+  -- Data constructors of the language (i.e. they are injective)
+  | U
+  | L Term
+  | P Term Term
+  deriving (Eq, Ord, Show)
+
+-- | A language of first order formulas with equality, conjunction,
+-- implication and quantifiers.
+data Formula
+  = Eq Term Term
+  | Conj Formula Formula
+    -- | The implication form is constrained to allow only one
+    -- equality in the antecedent.
+  | Then (Term, Term) Formula
+  | Exists Var Formula
+  | Forall Var Formula
+  deriving Show
+
+unify :: Formula -> [(Int, Term)]
+unify (Forall v f) = unify f
+unify (Exists v f) = unify f
+unify (Conj f1 f2) = unify f1 ++ unify f2
+unify (Then (t0, t1) f2) =
+  let unifsT1 = unifyEq t0 t1
+   in unifsT1 ++ unify (substituteSkolems unifsT1 f2)
+unify (Eq t0 t1) = unifyEq t0 t1
+
+unifyEq :: Term -> Term -> [(Int, Term)]
+-- Missing: occurs check
+unifyEq t0 t1@(SA (i, s))
+  | Just s' <- inverseSubst $ narrowForInvertibility (freeVars t0) s
+  , let t' = substitute s' t0
+  , Set.isSubsetOf (freeVars t') (domainSubst s)
+  = [(i, t')]
+unifyEq t0@(SA _) t1 = unifyEq t1 t0
+unifyEq _ _ = []
+
+-- | @narrowForInvertibility vs s@ removes pairs from @s@ if the
+-- range is not a variable, or if the range is not a member of @vs@.
+narrowForInvertibility :: Set Var -> Subst Term -> Subst Term
+narrowForInvertibility vs (Subst xs) =
+  Subst [(i, V j) | (i, V j) <- xs, Set.member j vs]
+
+inverseSubst :: Subst Term -> Maybe (Subst Term)
+inverseSubst (Subst xs) = fmap Subst (go xs)
+  where
+    go [] = Just []
+    go ((i, V j) : xs) = fmap ((j, V i) :) (go xs)
+    go _ = Nothing
+\end{verbatim}
+\caption{Conditional unification}
+\Description{Haskell implementation of condition unification}
+\label{conditional-unification}
+\end{figure}
+
+\section{Limitations of verification with SMT solvers}
+
+
+\section{Conclusions}
+\label{conclusions}
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
