@@ -78,11 +78,13 @@ compare with an earlier attempt based on the Haskell type checker and known as
 \textit{the foil}~\cite{maclaurin2022foil}
 (Section~\ref{capture-avoiding-substitution}). Later on, we verify an
 implementation of unification (Section~\ref{unification}), a more demanding
-example where extending earlier approaches would be some challenge. Lastly, we
-assess the limitations of both the Liquid Haskell implementation and the general
-approach of integrating SMT solvers via refinement types. In a nutshell, we
-anticipate many scenarios where the integration of SMT solvers makes programming
-more pleasant and static checks more powerful.
+example where extending earlier approaches would be some challenge. Our
+verification of unification is only partially successful, though it allows to
+estimate what it would take to complete it, which motivates as our third
+contribution a discussion of the limitations of both the Liquid Haskell
+implementation and the general approach of integrating SMT solvers via refinement
+types. In a nutshell, we anticipate many scenarios where the integration of SMT
+solvers makes programming more pleasant and static checks more powerful.
 
 
 \section{Capture-avoiding substitutions}
@@ -238,7 +240,7 @@ import Data.Set
 \end{verbatim}
 
 Liquid Haskell reads specifications from inside special Haskell comments
-\tc{\{-@ \ldots @-\}}. We will skip them in our snippets when redundant.
+\tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when redundant.
 The predicates in the refinement types are in a language of expressions
 referred to as the logic language. For the sake of this paper, we can
 regard it as a subset of Haskell. The predicates are assembled from
@@ -375,13 +377,13 @@ are careful to keep the verification agnostic on the actual representation of
 substitutions.
 
 \begin{verbatim}
-newtype Subst e = Subst [(Int, e)]
+type Subst e = [(Int, e)]
 freeVarsSubst :: Set Int -> Subst Exp -> Set Int
-freeVarsSubst used (Subst []) = empty
-freeVarsSubst used (Subst ((i, e) : s)) =
+freeVarsSubst used [] = empty
+freeVarsSubst used ((i, e) : xs) =
   | member i used = -- only take the first occurrence of i
-      union (freeVars e) (freeVarsSubst (difference used (singleton i)) s)
-  | otherwise = freeVarsSubst used (Subst s)
+      union (freeVars e) (freeVarsSubst (difference used (singleton i)) xs)
+  | otherwise = freeVarsSubst used xs
 \end{verbatim}
 
 Unless we rename all the binders unconditionally, it is no longer
@@ -394,8 +396,7 @@ to disagree.
 
 Unfortunately, this specification is more laborious to verify, as
 \tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
-function. Each lemma requires writing a recursive function for Liquid Haskell to
-verify it, which is additional effort.
+function.
 
 \begin{verbatim}
 lemma_freeVarsSubst_sing :: i:_ -> s:_
@@ -414,7 +415,22 @@ lemma_freeVarsSubst_extend
      }
 \end{verbatim}
 
-And then they need to be applied in the cases of \tc{substitute}.
+Each lemma requires writing a recursive function for Liquid Haskell to
+verify it, which is additional effort. Here's the proof for
+\tc{lemma\_free\-Vars\-Subst\_union}.
+
+\begin{verbatim}
+lemma_freeVarsSubst_union :: Set Int -> Set Int -> Subst Exp -> ()
+lemma_freeVarsSubst_union _ _ [] = ()
+lemma_freeVarsSubst_union s1 s2 ((i, _) : xs) =
+  lemma_freeVarsSubst_union
+    (difference s1 (singleton i)) (difference s2 (singleton i)) xs
+\end{verbatim}
+
+The recursive function follows the structure of an inductive proof,
+with much of the folding, unfolding, and set properties applied
+automatically. And this is similar for the proofs of the other lemmas.
+Then the lemmas need to be applied in the cases of \tc{substitute}.
 
 \begin{verbatim}
 substitute scope s e0 = case e0 of
@@ -463,37 +479,61 @@ statements are required.
 \label{unification}
 
 In this section we look now at another example where we can put the set theory
-of SMT solvers to work for us. This is conditional unification as implemented
-in Figure~\ref{conditional-unification}.
+of SMT solvers to work for us. This is conditional unification of a form of
+hereditary Harrop formulas.
+
+As before, variables are represented as integers, and we also have a form of
+skolem function application $f(t_0,\ldots,t_n)$ represented as a pair
+$(f, [x_0:=t_0,\ldots,x_n:=t_n])$, where $x_0 \ldots x_n$ are the only free
+variables allowed in the solutions of $f$.
+
+\begin{verbatim}
+type Var = Int
+type SkolemApp = (Var, Subst Term)
+\end{verbatim}
+
+The purpose of the skolem $f(t_0,\ldots,t_n)$ is to replace existential variables
+in a formula like $\forall x. \exists z. z = x$ to get $\forall x. f_z(x) = x$, which
+in our representation will be $\forall x. (f_z, [x:=x]) = x$.
+The purpose of unification would be to find a value of $f_z$ that only has the variable
+$x$ free, and that makes the formula true.
+
+\begin{verbatim}
+data Term
+  = V Var | SA SkolemApp | U | L Term | P Term Term deriving
+
+data Formula
+  = Eq Term Term               -- equality
+  | Conj Formula Formula       -- conjunctions
+  | Then (Term, Term) Formula  -- a = b => f
+  | Exists Var Formula         -- existential quantification
+  | Forall Var Formula         -- universal quantification
+\end{verbatim}
+
+Our term language allows for variables, skolem applications, and some artificial
+data constructors (i.e. injective functions). The language of formulas has
+equality, conjunction, existential and universal quantification, and it also
+has a form of implication that only allows for equalities in the antecedent.
+The conception is driven by the simplest language that still would allow to
+express something of practical interest like constraints of generalized
+algebraic data types.
+
+Our unification algorithm is then expressed in Figure~\ref{conditional-unification}.
+When unification fails, we return an incomplete list of solutions, that is one that
+doesn't provide solutions for all the skolems in a formula.
+There are a few preparation passes on unification formulas that we have elided since
+they aren't essential to the discussion in this section.
+Existential variables would be replaced with skolem applications, equalities of
+data constructors like $P a b = P c d \Rightarrow f$ are split to
+$a = c \land b = d \Rightarrow f$, formulas are normalized to prenex form, variables
+are renamed to avoid name captures, etc. We have functions \tc{substitute} and
+\tc{substituteSkolems} to apply substitutions in terms and substitutions of skolems
+in formulas. And we also have a function \tc{skolemSet} to collect the skolems of a
+term.
 
 \begin{figure}
 \begin{verbatim}
-type Var = Int
-type SkolemApp = (Int, Subst Term)
-
--- | A language of terms with variables, functions, and constants.
-data Term
-  = V Var
-  | SA SkolemApp
-  -- Data constructors of the language (i.e. they are injective)
-  | U
-  | L Term
-  | P Term Term
-  deriving (Eq, Ord, Show)
-
--- | A language of first order formulas with equality, conjunction,
--- implication and quantifiers.
-data Formula
-  = Eq Term Term
-  | Conj Formula Formula
-    -- | The implication form is constrained to allow only one
-    -- equality in the antecedent.
-  | Then (Term, Term) Formula
-  | Exists Var Formula
-  | Forall Var Formula
-  deriving Show
-
-unify :: Formula -> [(Int, Term)]
+unify :: Formula -> [(Var, Term)]
 unify (Forall v f) = unify f
 unify (Exists v f) = unify f
 unify (Conj f1 f2) = unify f1 ++ unify f2
@@ -502,12 +542,12 @@ unify (Then (t0, t1) f2) =
    in unifsT1 ++ unify (substituteSkolems unifsT1 f2)
 unify (Eq t0 t1) = unifyEq t0 t1
 
-unifyEq :: Term -> Term -> [(Int, Term)]
--- Missing: occurs check
+unifyEq :: Term -> Term -> [(Var, Term)]
 unifyEq t0 t1@(SA (i, s))
   | Just s' <- inverseSubst $ narrowForInvertibility (freeVars t0) s
   , let t' = substitute s' t0
-  , Set.isSubsetOf (freeVars t') (domainSubst s)
+  , not (Set.member i (skolemSet t'))
+  , Set.isSubsetOf (freeVars t') (domain s)
   = [(i, t')]
 unifyEq t0@(SA _) t1 = unifyEq t1 t0
 unifyEq _ _ = []
@@ -529,6 +569,130 @@ inverseSubst (Subst xs) = fmap Subst (go xs)
 \Description{Haskell implementation of condition unification}
 \label{conditional-unification}
 \end{figure}
+
+The function \tc{unifyEq} defines what a good solution should be.
+One of the conditions is that whatever term \tc{t'} is proposed
+as solution for a skolem \tc{i}, it needs to have as free variables only those in the
+domain of the substitution defining the skolem application
+(\textit{scope check}). Another
+condition is that the skolem \tc{i} should not occur in the solution
+\tc{t'} (\textit{occurs check}). And since we are inverting a substitution to find
+\tc{t'}, we might not find solutions if we cannot invert the
+substitution. This implementation only inverts substitutions where
+variables are mapped to variables. That is, we solve $(f, [z:=x]) = L(L(x))$
+to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L(L(x)))$.
+
+\subsection{Verification of \tc{unifyEq}}
+
+We start our verification effort by providing a specification to
+the function \tc{unifyEq}, which encodes the scope check, the occurs check,
+and the relationship of skolems present in the result and in the arguments.
+
+\begin{verbatim}
+unifyEq
+  :: t0:Term
+  -> {t1:Term | Map.union (scopesTerm t0) (scopesTerm t1)
+                  = Map.union (scopesTerm t1) (scopesTerm t0)}
+  -> [(v :: Var
+      , { t:Term |
+             Map.isSubsetOf (freeVars t)
+               (Map.lookup v (Map.union (scopesTerm t0) (scopesTerm t1)))
+          && not (Set.member i (skolemSet t))
+          && Map.isSubsetOf (scopesTerm t)
+               (Map.union (scopesTerm t0) (scopesTerm t1))
+        }
+      )] / [terminationUnifyEq t0 t1]
+\end{verbatim}
+
+The function \tc{scopesTerm} is only used in specifications and it produces
+a projection of the skolem applications in a given term. Instead of returning
+full skolem applications, it only provides the skolem name and the domain of
+the substitution.
+
+\begin{verbatim}
+scopesTerm :: Term -> Map Var (Set Int)
+scopesTerm (V i) = Map.empty
+scopesTerm (SA (i, s)) = Map.singleton i (domain s)
+scopesTerm U = Map.empty
+scopesTerm (L t) = scopesTerm t
+scopesTerm (P t0 t1) = Map.union (scopesTerm t0) (scopesTerm t1)
+\end{verbatim}
+
+We assume the function \tc{Map.union} to be commutative despite of it being
+defined as left-biased in the \tc{containers} package. This is because we
+rely on the preceding passes of unification to ensure that everywhere a
+skolem occurs, the domain of the substitution is always the same.
+
+The function \tc{terminationUnifyEq} is a metric that we provide so Liquid
+Haskell can check that \tc{unifyEq} terminates. When the recursion is
+structural, termination can be proved without extra considerations, but in
+this case we are doing a recursive call that swaps the order of the arguments.
+The metric that we provide must be greater or equal to 0 and must decrease on
+each recursive call.
+
+\begin{verbatim}
+{-@ terminationUnifyEq :: Term -> Term -> {v:Int | v >= 0} @-}
+terminationUnifyEq :: Term -> Term -> Int
+terminationUnifyEq (SA _) _ = 1
+terminationUnifyEq _ (SA _) = 0
+terminationUnifyEq _ _ = 0
+\end{verbatim}
+
+When verifying \tc{unifyEq}, the two first conjuncts of the return type can
+be easily established since they match exactly the guards in the first equation.
+The last conjunct demands more calculation.
+
+If we substitute \tc{t} by \tc{substitute s'} in the last conjunct, we get that we
+need to prove
+
+\begin{verbatim}
+Map.isSubsetOf (scopesTerm (substitute s' t0)
+               (Map.union (scopesTerm t0) (scopesTerm t1))
+\end{verbatim}
+
+Liquid Haskell does compute this on its own. Then we can use the fact that substitution
+preserves the skolems returned by \tc{scopesTerm} to arrive at
+
+\begin{verbatim}
+Map.isSubsetOf (scopesTerm t0) (Map.union (scopesTerm t0) (scopesTerm t1))
+\end{verbatim}
+
+And this statement the SMT solver can prove on its own using the theory of arrays,
+which can be used to implement maps. The only step that the user needs to spell out
+is the property relating \tc{substitute} and \tc{scopesTerm}.
+
+\begin{verbatim}
+lemmaSubstituteScopesTerm
+  :: s:Subst {ti:Term | isVar ti} -> t:Term
+  -> { scopesTerm t = scopesTerm (substitute s t) }
+\end{verbatim}
+
+The substitution in the lemma is required to map to terms that are variables, but
+this is exactly what the result of our substitution inversion produces!
+
+\begin{verbatim}
+isVar :: Term -> Bool
+isVar (V _) = True
+isVar _ = False
+
+{-@ inverseSubst :: Subst Term -> {v:Subst {t:Term | isVar t} @-}
+\end{verbatim}
+
+\subsection{Verification of \tc{unify}}
+
+
+
+
+TODO
+\begin{itemize}
+\item write a version of Unif2.hs that has terminationUnifyEq and lemmaSubstituteScopesTerm
+\item show the proof of lemmaSubstituteScopesTerm
+\item specify unify
+\item describe the queries that LH would send to the SMT solver
+\item describe any lemmas that we could not hope LH to ever discover on its own
+\item (defer discussing the workaround lemmas to the section on limitations).
+\end{itemize}
+
 
 \section{Limitations of verification with SMT solvers}
 
