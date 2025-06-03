@@ -17,7 +17,7 @@
      \country{Japan}
 }
 \email{arnaud.spiwack@tweag.io}
-\keywords{refinement types, SMT solvers, formal verification}
+\keywords{refinement types, SMT solvers, static analysis, formal verification}
 \begin{CCSXML}
 <ccs2012>
    <concept>
@@ -65,23 +65,23 @@ balancing act.
 
 The options are not just to lean or not to lean on the type checker, though. In
 this paper we analyze a couple of use cases in the Haskell programming language
-from the perspective of a third alternative. We verify the usage of interfaces
-with automated theorem provers, more specifically, SMT solvers. And we connect
-SMT solvers with Haskell by using refinement types as implemented in the Liquid
-Haskell verification tool.
+from the perspective of a third alternative. We implement the static checks of
+the interfaces with automated theorem provers, more specifically, SMT solvers.
+And we connect SMT solvers with Haskell by using refinement types as implemented
+in the Liquid Haskell verification tool.
 
 While SMT solvers have been intended to support programming since long, it has
 been less discussed how their integration through refinement types influences
 interface design. Therefore, our first contribution is a study of
-capture-avoiding substitution that we verify with Liquid Haskell, where we
-compare with an earlier attempt based on the Haskell type checker and known as
+capture-avoiding substitution with safety checks implemented with Liquid Haskell,
+where we compare with an earlier attempt based on the Haskell type checker and known as
 \textit{the foil}~\cite{maclaurin2022foil}
-(Section~\ref{capture-avoiding-substitution}). Later on, we verify an
-implementation of unification (Section~\ref{unification}), a more demanding
+(Section~\ref{capture-avoiding-substitution}). Later on, we implement safety checks
+in an implementation of unification (Section~\ref{unification}), a more demanding
 example where extending earlier approaches would be some challenge. Our
-verification of unification is only partially successful, though it allows to
-estimate what it would take to complete it, which motivates as our third
-contribution a discussion of the limitations of both the Liquid Haskell
+attempt with unification is only partially successful, though it allows to
+estimate what it would take to complete it, which motivates our third
+contribution: a discussion of the limitations of both the Liquid Haskell
 implementation and the general approach of integrating SMT solvers via refinement
 types. In a nutshell, we anticipate many scenarios where the integration of SMT
 solvers makes programming more pleasant and static checks more powerful.
@@ -239,8 +239,10 @@ import Data.Set
 {-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
 \end{verbatim}
 
-Liquid Haskell reads specifications from inside special Haskell comments
-\tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when redundant.
+Liquid Haskell reads refinement type signatures and other annotations from
+inside special Haskell comments
+\tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when it is clear
+that we are presenting annotations.
 The predicates in the refinement types are in a language of expressions
 referred to as the logic language. For the sake of this paper, we can
 regard it as a subset of Haskell. The predicates are assembled from
@@ -250,13 +252,13 @@ A function like \tc{member}, which comes from the module \tc{Data.Set}
 in the \tc{containers} package, is linked by Liquid Haskell to the set
 theory of the SMT solver.
 
-Specifications starting with the \tc{assume} keyword declare that the
-corresponding Haskell function should meet the specification, but it isn't
-verified. When \tc{freshVar} is called in other functions, Liquid Haskell
+Refinement type signatures starting with the \tc{assume} keyword declare that the
+corresponding Haskell function should honor the signature, but it isn't
+checked. When \tc{freshVar} is called in other functions, Liquid Haskell
 will assume that the returned variable is fresh whatever the implementation
-of \tc{freshVar} does. In contrast, Liquid Haskell is going to verify that
+of \tc{freshVar} does. In contrast, Liquid Haskell is going to check that
 the rapier implementation of Figure~\ref{rapier-style-substitution} meets the
-following specification of \tc{substitute}.
+following refinement type signature of \tc{substitute}.
 
 \begin{verbatim}
 {-@
@@ -278,8 +280,8 @@ refinement types.
 Functions like \tc{isSubsetOf} and \tc{difference} come from the \tc{Data.\allowbreak Set}
 module. The function \tc{freeVars} is in the same module as \tc{subs\-ti\-tute},
 and collects the free variables of an expression. We note that this function
-is only used in specifications, and in particular, it is not evaluated when
-calling to \tc{substitute}.
+is only used in refinement type signatures, and in particular, it is not evaluated
+when calling to \tc{substitute}.
 
 \begin{verbatim}
 freeVars :: Exp -> Set Int
@@ -299,8 +301,8 @@ language.
 This is the way in which uninterpreted functions are declared. The function
 \tc{domain} stands for the set of variables in the domain of a substitution.
 Liquid Haskel doesn't know anything more about it than its type signature,
-but the user can enrich such knowledge with the specifications of the substitution
-operations that manipulate the domain.
+but the user can enrich such knowledge within the refinement type signatures
+of the substitution operations that manipulate the domain.
 
 \begin{verbatim}
 assume lookupSubst :: k:Int -> xs:Subst e
@@ -314,8 +316,8 @@ Now, for instance, whenever Liquid Haskell encounters an application
 of the function \tc{lookupSubst}, it will assume that the key is in the domain
 of the substitution if the lookup succeeds.
 
-Our specification of \tc{substitute} follows the specification of MacLaurin et
-al.  to the letter. With these annotations, Liquid Haskell can ensure that the
+Our refinement type signature of \tc{substitute} follows the type signature of
+MacLaurin et al. to the letter. With these annotations, Liquid Haskell can ensure that the
 implementation of substitution in Figure~\ref{rapier-style-substitution} meets
 all of the requirements in Section~\ref{the-rapier-with-stronger-types}, except
 for the first requirement, which we discuss further in the next subsection.
@@ -348,7 +350,7 @@ withRefreshed (UnsafeScope s) i
   | otherwise = (UnsafeScope (insert i s), i)
 \end{verbatim}
 
-The specification of the function captures the fact that the returned
+The refinement type signature of the function captures the fact that the returned
 name is not in the input set \tc{s}, and that the returned set is an
 extension of the input. We also need to wrap our sets of names into a
 \tc{newtype} in order to hide the \tc{insert} operation from the programmer,
@@ -358,7 +360,7 @@ new scope sets. This solution is available in the file
 in our repository.
 
 Instead of introducing \tc{withRefreshed}, we could avoid
-modifying the types in the program by providing a more stringent specification for
+modifying the types in the program by providing a more stringent refinement type for
 \tc{substitute}.
 
 \begin{verbatim}
@@ -367,13 +369,13 @@ substitute
   -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
 \end{verbatim}
 
-In this specification we are spelling exactly what the expected free variables in the result are.
-We use in the specification a function \tc{freeVarsSubst} such that
+In this signature we are spelling exactly what the expected free variables in the result are.
+We use a function \tc{freeVarsSubst} such that
 \tc{freeVarsSubst (freeVars e) s} computes the free variables in the range of the
 substitution \tc{s} that is actually used when applying it
 to the expression \tc{e}. We provide an example representation for substitutions and
 a schematic presentation of \tc{freeVarsSubst}, but in our implementation we
-are careful to keep the verification agnostic on the actual representation of
+are careful to keep the checks agnostic on the actual representation of
 substitutions.
 
 \begin{verbatim}
@@ -394,7 +396,7 @@ it may show up in the free variables of the result, but leaving it unrenamed wou
 cause the call to the function \tc{freeVars} in the expected return refinement type
 to disagree.
 
-Unfortunately, this specification is more laborious to verify, as
+Unfortunately, this refinement type signature is more laborious to check, as
 \tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
 function.
 
@@ -416,7 +418,7 @@ lemma_freeVarsSubst_extend
 \end{verbatim}
 
 Each lemma requires writing a recursive function for Liquid Haskell to
-verify it, which is additional effort. Here's the proof for
+check it, which is additional effort. Here's the proof for
 \tc{lemma\_free\-Vars\-Subst\_union}.
 
 \begin{verbatim}
@@ -445,7 +447,7 @@ substitute scope s e0 = case e0 of
 \end{verbatim}
 
 The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
-brings the lemma into consideration of Liquid Haskell when verifying the
+brings the lemma into consideration of Liquid Haskell when checking the
 first argument without evaluating the recursive function that stands for
 the lemma proof. This solution is available in the file
 \tc{Subst3.hs}\footnote{A solution that addresses all requirements without changing types in the program: \sourcefile{Subst3.hs}}
@@ -454,7 +456,7 @@ in our repository.
 
 \subsection{Comparison}
 
-Liquid Haskell can verify most of the requirements with little assistance
+Liquid Haskell can ensure most of the requirements with little assistance
 because it is delegating much of the work to an underlying SMT solver.
 SMT solvers are tools that decide whether (usually first order) logic formulas are
 satisfiable and provide dedicated mechanisms to reason about various theories
@@ -584,7 +586,7 @@ to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L
 
 \subsection{Verification of \tc{unifyEq}}
 
-We start our verification effort by providing a specification to
+We start introducing static checks by providing a refinement type signature to
 the function \tc{unifyEq}, which encodes the scope check, the occurs check,
 and the relationship of skolems present in the result and in the arguments.
 
@@ -604,7 +606,7 @@ unifyEq
       )] / [terminationUnifyEq t0 t1]
 \end{verbatim}
 
-The function \tc{scopesTerm} is only used in specifications and it produces
+The function \tc{scopesTerm} is only used in refinement types and it produces
 a projection of the skolem applications in a given term. Instead of returning
 full skolem applications, it only provides the skolem name and the domain of
 the substitution.
@@ -638,7 +640,7 @@ terminationUnifyEq _ (SA _) = 0
 terminationUnifyEq _ _ = 0
 \end{verbatim}
 
-When verifying \tc{unifyEq}, the two first conjuncts of the return type can
+When checking \tc{unifyEq}, the two first conjuncts of the return type can
 be easily established since they match exactly the guards in the first equation.
 The last conjunct demands more calculation.
 
@@ -694,7 +696,7 @@ TODO
 \end{itemize}
 
 
-\section{Limitations of verification with SMT solvers}
+\section{Limitations of API checks with SMT solvers}
 
 
 \section{Conclusions}
