@@ -323,19 +323,23 @@ all of the requirements in Section~\ref{the-rapier-with-stronger-types}, except
 for the first requirement, which we discuss further in the next subsection.
 
 Liquid Haskell ensures the last requirement because the
-specification of the recursive call demands the free variables of the lambda
+refinement types of the recursive call demands the free variables of the lambda
 body to be in the domain of the substitution. Since these free variables might
 contain the binder variable, the substitution is not accepted without extending
-it first. In contrast, the foil leaves this bit to be implemented in the unsafe
-part of their API, and that is why the omission slips despite of aiming for
-similar specifications.
+it first.
 
 \subsection{Ensuring the scope set is checked}
 
-In the foil, the ability to check on the scope is an interplay of the types and the
-fact that the user is prevented from inserting a variable in a scope without
-also checking if the variable is in the scope already. Doing the same in Liquid
-Haskell would require the addition of the following function.
+Checking that the scope set is actually used, and therefore that binders to rename
+are not forgotten, admits at least two approaches. In both cases we will prevent
+the user from making a recursive call to \tc{substitute} without checking first
+if the binder needs renaming.
+
+The first approach prevents the user from inserting a name into a scope if that
+name is in the scope already. In such case, a fresh name has to be inserted instead.
+And it is not possible to skip updating the scope since the other enforced checks
+demand it. This is the new function that we offer to insert elements into a scope
+set.
 
 \begin{verbatim}
 newtype Scope = UnsafeScope (Set Int)
@@ -359,8 +363,8 @@ new scope sets. This solution is available in the file
 \tc{Subst5.hs}\footnote{A solution that addresses all requirements: \sourcefile{Subst5.hs}}
 in our repository.
 
-Instead of introducing \tc{withRefreshed}, we could avoid
-modifying the types in the program by providing a more stringent refinement type for
+The second approach, avoid introducing \tc{withRefreshed} and modifying the
+types in the program by providing a more stringent refinement type for
 \tc{substitute}.
 
 \begin{verbatim}
@@ -464,18 +468,19 @@ satisfiable and provide dedicated mechanisms to reason about various theories
 
 In the case of capture-avoiding substitution, multiple queries that
 Liquid Haskell gives to the SMT solver involve reasoning on sets, thus
-making effective use of its capabilities.
+making effective use of its capabilities. Moreover, the expression of
+relationships between arguments and result is fairly natural with
+refinement types. When there are lemmas to prove, despite of being
+additional effort to write, they still have proofs that don't require
+a lot of creativity.
 
-On the other hand, an approach like the foil, that is based on reasoning
-with the type checker, needs to repurpose the type checker for the sake
-of reasoning about the theories at hand. Checking that a program is
-well typed is not quite the same thing as reasoning about the validity
-of first order logic statements. The difference shows in the amount of
-code that a supporting library for the foil needs to encode the statements,
-the translation of the solution to the implementation that uses such
-library, and the difficulties in adapting these artifacts when new
-statements are required.
-
+On the other hand, an approach like the foil does need the author to
+think carefully about how to encode the various static checks with the
+type checker, a non trivial supporting library needs to be written,
+and the effort might need further iterations when accounting for
+additional properties.
+We will have more to say on the experience of implementing API checks
+after our next case study.
 
 \section{Unification}
 \label{unification}
