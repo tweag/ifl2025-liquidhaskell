@@ -487,7 +487,9 @@ after our next case study.
 
 In this section we look now at another example where we can put the set theory
 of SMT solvers to work for us. This is conditional unification of a form of
-hereditary Harrop formulas.
+hereditary Harrop formulas. Unlike in the previous section, the reasoning
+presented in this section is not fully implemented, and this is why our
+achievement is partial. In Section~\ref{limitations} we discuss the unimplemented parts.
 
 As before, variables are represented as integers, and we also have a form of
 skolem function application $f(t_0,\ldots,t_n)$ represented as a pair
@@ -598,13 +600,12 @@ and the relationship of skolems present in the result and in the arguments.
 \begin{verbatim}
 unifyEq
   :: t0:Term
-  -> {t1:Term | Map.union (scopesTerm t0) (scopesTerm t1)
-                  = Map.union (scopesTerm t1) (scopesTerm t0)}
+  -> {t1:Term | unionCommutes (scopesTerm t0) (scopesTerm t1)}
   -> [(v :: Var
       , { t:Term |
-             Map.isSubsetOf (freeVars t)
+             isSubsetOfJust (freeVars t)
                (Map.lookup v (Map.union (scopesTerm t0) (scopesTerm t1)))
-          && not (Set.member i (skolemSet t))
+          && not (Set.member v (skolemSet t))
           && Map.isSubsetOf (scopesTerm t)
                (Map.union (scopesTerm t0) (scopesTerm t1))
         }
@@ -625,10 +626,24 @@ scopesTerm (L t) = scopesTerm t
 scopesTerm (P t0 t1) = Map.union (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
 
+We define the predicate \tc{isSubsetOfJust} to say that the lookup succeeds
+and that it yields a superset of the first argument.
+
+\begin{verbatim}
+isSubsetOfJust :: Ord a => Set a -> Maybe (Set a) -> Bool
+isSubsetOfJust xs (Just ys) = Set.isSubsetOf xs ys
+isSubsetOfJust xs Nothing = False
+\end{verbatim}
+
 We assume the function \tc{Map.union} to be commutative despite of it being
 defined as left-biased in the \tc{containers} package. This is because we
 rely on the preceding passes of unification to ensure that everywhere a
 skolem occurs, the domain of the substitution is always the same.
+
+\begin{verbatim}
+unionCommutes :: Set a -> Set a -> Bool
+unionCommutes s0 s1 = Map.union s0 s1 == Map.union s1 s0
+\end{verbatim}
 
 The function \tc{terminationUnifyEq} is a metric that we provide so Liquid
 Haskell can check that \tc{unifyEq} terminates. When the recursion is
@@ -674,8 +689,8 @@ lemmaSubstituteScopesTerm
   -> { scopesTerm t = scopesTerm (substitute s t) }
 \end{verbatim}
 
-The substitution in the lemma is required to map to terms that are variables, but
-this is exactly what the result of our substitution inversion produces!
+The range of the substitution \tc{s} is required to only contain variables, but
+this is exactly what \tc{inverseSubst} produces!
 
 \begin{verbatim}
 isVar :: Term -> Bool
@@ -687,22 +702,100 @@ isVar _ = False
 
 \subsection{Checking \tc{unify}}
 
+In the same way as in the previous section, we start checking the function \tc{unify}
+by providing a refinement type signature. This is a rephrasing of the refinement
+types of \tc{unifyEq} when the input is formula instead of a pair of terms.
 
+\begin{verbatim}
+unify
+  :: {f:Formula | consistentSkolemScopes f}
+  -> [(v :: Var
+      , { t:Term |
+             isSubsetOfJust (freeVars t) (Map.lookup v (scopes f))
+          && not (Set.member v (skolemSet t))
+          && Map.isSubsetOf (scopesTerm t) (scopes f)
+        }
+      )] / [formulaSize f]
+\end{verbatim}
+
+The recursion of unify is not structural since in the implication case we
+are chaining the recursive calls. Therefore we provide a termination
+metric \tc{formulaSize} that counts the amount of connectives in a formula.
+We also define a function \tc{scopes} analogous to \tc{scopesTerm} to obtain the skolems
+of a formula.
+
+\begin{verbatim}
+scopes :: Formula -> Map Var (Set Int)
+scopes (Forall _ f) = scopes f
+scopes (Exists _ f) = scopes f
+scopes (Conj f1 f2) = Map.union (scopes f1) (scopes f2)
+scopes (Then (t0, t1) f2) =
+  Map.union (scopesTerm t0) (Map.union (scopesTerm t1) (scopes f2))
+scopes (Eq t0 t1) = Map.union (scopesTerm t0) (scopesTerm t1)
+\end{verbatim}
+
+We also define the predicate \tc{consistentSkolemScopes}, which ensures that
+all occurrences of a skolem have the same domain.
+
+\begin{verbatim}
+consistentSkolemScopes :: Formula -> Bool
+consistentSkolemScopes (Forall _ f) = consistentSkolemScopes f
+consistentSkolemScopes (Exists _ f) = consistentSkolemScopes f
+consistentSkolemScopes (Conj f1 f2) =
+      consistentSkolemScopes f1 && consistentSkolemScopes f2
+  &&  unionCommutes (scopes f1) (scopes f2)
+consistentSkolemScopes (Then (t0, t1) f2) =
+     consistentSkolemScopes f2
+  && unionCommutes (scopesTerem t0) (scopesTerm t1)
+  && unionCommutes (Map.union (scopesTerem t0) (scopesTerm t1)) (scopes f2)
+consistentSkolemScopes (Eq t0 t1) =
+  unionCommutes (scopesTerm t0) (scopesTerm t1)
+\end{verbatim}
+
+Liquid Haskell can check automatically the refinement type signature of
+\tc{unify}. In the case of quantifiers, unfolding definitions of
+\tc{scopes} plus the refinement type of the recursive calls suffices.
+In the case of conjunction, the theory of arrays of the SMT solver
+kicks in to establish the last conjunct of the refinement type:
+
+\begin{verbatim}
+(Map.isSubsetOf (scopesTerm t) (scopes f1) =>
+  Map.isSubsetOf (scopesTerm t) (Map.union (scopes f1) (scopes f2)))
+&&
+(Map.isSubsetOf (scopesTerm t) (scopes f2) =>
+  Map.isSubsetOf (scopesTerm t) (Map.union (scopes f1) (scopes f2)))
+\end{verbatim}
+
+For the first conjunct of the refinement type we also need to prove
+
+\begin{verbatim}
+unionCommutes (scopes f1) (scopes f2)
+=>
+(isSubsetOfJust (freeVars t) (Map.lookup v (scopes f1)) =>
+  isSubsetOfJust (freeVars t)
+                 (Map.lookup v (Map.union (scopes f1) (scopes f2))))
+&&
+(isSubsetOfJust (freeVars t) (Map.lookup v (scopes f2)) =>
+  isSubsetOfJust (freeVars t)
+                 (Map.lookup v (Map.union (scopes f1) (scopes f2))))
+\end{verbatim}
+
+The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
+in the refinement type of the input. The other equations in \tc{unify}
+are checked using similar reasoning, all of it automatic.
 
 
 TODO
 \begin{itemize}
 \item write a version of Unif2.hs that has terminationUnifyEq and lemmaSubstituteScopesTerm
 \item show the proof of lemmaSubstituteScopesTerm
-\item specify unify
-\item describe the queries that LH would send to the SMT solver
-\item describe any lemmas that we could not hope LH to ever discover on its own
+\item show the proof of lemmaSubstituteScopesTerm
 \item (defer discussing the workaround lemmas to the section on limitations).
 \end{itemize}
 
 
 \section{Limitations of API checks with SMT solvers}
-
+\label{limitations}
 
 \section{Conclusions}
 \label{conclusions}
