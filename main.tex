@@ -206,7 +206,27 @@ with free variables in one scope (\tc{Exp n}) can be coerced to expressions with
 free variables in a superset (\tc{Exp l}), and to introduce scope sets that extend
 others with freshly created names. They also provide an implementation of maps of
 variables to expressions, that is the substitutions to apply, with an interface
-that uses the new types as well.
+that uses the new types as well. There is for instance the following function to
+produce fresh variables:
+
+\begin{verbatim}
+withRefreshed
+  :: Distinct o => Scope o -> Name i
+  -> (forall (o' :: S). DExt o o' => NameBinder o o' -> r)
+  -> r
+\end{verbatim}
+
+Using the constraint \tc{DExt}, this type signature says that scope set \tc{o'}
+extends the scope set \tc{o} with the given \tc{NameBinder o o'}. This binder
+may have the same name as the provided \tc{Name i} if it was not present in
+\tc{o}, otherwise it will be a fresh name. As another example, the following
+function always produces a fresh name.
+
+\begin{verbatim}
+withFresh
+  :: Distinct n => Scope n -> (forall l . DExt n l => NameBinder n l -> r )
+  -> r
+\end{verbatim}
 
 With these measures, the foil is able to address the above requirements except the
 last one, which must be handled carefully in the unsafe part of their API. This
