@@ -647,6 +647,10 @@ scopesTerm (L t) = scopesTerm t
 scopesTerm (P t0 t1) = Map.union (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
 
+In this function we are using the data type \tc{Map}, also coming from the
+package \tc{containers}. Liquid Haskell can link the calls in this function
+with the array theory that is used to represent maps in the SMT solver.
+
 We define the predicate \tc{isSubsetOfJust} to say that the lookup succeeds
 and that it yields a superset of the first argument.
 
@@ -725,7 +729,7 @@ isVar _ = False
 
 In the same way as in the previous section, we start checking the function \tc{unify}
 by providing a refinement type signature. This is a rephrasing of the refinement
-types of \tc{unifyEq} when the input is formula instead of a pair of terms.
+types of \tc{unifyEq} when the input is a formula instead of a pair of terms.
 
 \begin{verbatim}
 unify
@@ -756,7 +760,7 @@ scopes (Eq t0 t1) = Map.union (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
 
 We also define the predicate \tc{consistentSkolemScopes}, which ensures that
-all occurrences of a skolem have the same domain.
+all occurrences of a skolem have the same domain in their substitutions.
 
 \begin{verbatim}
 consistentSkolemScopes :: Formula -> Bool
@@ -810,7 +814,7 @@ TODO
 \begin{itemize}
 \item write a version of Unif2.hs that has terminationUnifyEq and lemmaSubstituteScopesTerm
 \item show the proof of lemmaSubstituteScopesTerm
-\item show the proof of lemmaSubstituteScopesTerm
+\item test in an example that consistentSkolemScopes works as we expect
 \item (defer discussing the workaround lemmas to the section on limitations).
 \end{itemize}
 
