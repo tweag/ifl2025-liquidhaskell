@@ -589,7 +589,7 @@ substitution. This implementation only inverts substitutions where
 variables are mapped to variables. That is, we solve $(f, [z:=x]) = L(L(x))$
 to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L(L(x)))$.
 
-\subsection{Verification of \tc{unifyEq}}
+\subsection{Checking \tc{unifyEq}}
 
 We start introducing static checks by providing a refinement type signature to
 the function \tc{unifyEq}, which encodes the scope check, the occurs check,
@@ -685,7 +685,7 @@ isVar _ = False
 {-@ inverseSubst :: Subst Term -> {v:Subst {t:Term | isVar t} @-}
 \end{verbatim}
 
-\subsection{Verification of \tc{unify}}
+\subsection{Checking \tc{unify}}
 
 
 
