@@ -214,7 +214,9 @@ produce fresh variables:
 
 \begin{verbatim}
 withRefreshed
-  :: Distinct o => Scope o -> Name i
+  :: Distinct o
+  => Scope o
+  -> Name i
   -> (forall (o' :: S). DExt o o' => NameBinder o o' -> r)
   -> r
 \end{verbatim}
@@ -227,7 +229,9 @@ function always produces a fresh name.
 
 \begin{verbatim}
 withFresh
-  :: Distinct n => Scope n -> (forall l . DExt n l => NameBinder n l -> r )
+  :: Distinct n
+  => Scope n
+  -> (forall l . DExt n l => NameBinder n l -> r )
   -> r
 \end{verbatim}
 
@@ -288,7 +292,9 @@ following refinement type signature of \tc{substitute}.
 type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S}
 
 substitute
-  :: scope:Set Int -> s:Subst (ScopedExp scope) -> ScopedExp (domain s)
+  :: scope:Set Int
+  -> s:Subst (ScopedExp scope)
+  -> ScopedExp (domain s)
   -> ScopedExp scope
 @-}
 substitute :: Set Int -> Subst Exp -> Exp -> Exp
@@ -328,10 +334,15 @@ but the user can enrich such knowledge within the refinement type signatures
 of the substitution operations that manipulate the domain.
 
 \begin{verbatim}
-assume lookupSubst :: k:Int -> xs:Subst e
+assume lookupSubst
+  :: k:Int
+  -> xs:Subst e
   -> {m:Maybe e | isJust m == member k (domain xs) }
 
-assume extendSubst :: s:Subst a -> i:Int -> a
+assume extendSubst
+  :: s:Subst a
+  -> i:Int
+  -> a
   -> {v:_ | union (domain s) (singleton i) = domain v }
 \end{verbatim}
 
@@ -392,7 +403,9 @@ types in the program by providing a more stringent refinement type for
 
 \begin{verbatim}
 substitute
-  :: scope:Set Int -> s:Subst (ScopedExp scope) -> ei:ScopedExp (domain s)
+  :: scope:Set Int
+  -> s:Subst (ScopedExp scope)
+  -> ei:ScopedExp (domain s)
   -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
 \end{verbatim}
 
@@ -428,14 +441,14 @@ Unfortunately, this refinement type signature is more laborious to check, as
 function.
 
 \begin{verbatim}
-lemma_freeVarsSubst_sing :: i:_ -> s:_
+lemmaFreeVarsSubstSing :: i:_ -> s:_
   -> { freeVarsSubst (singleton i) s == freeVarsMaybe (lookupSubst i s) }
 
-lemma_freeVarsSubst_union :: s1:_ -> s2:_ -> s:_
+lemmaFreeVarsSubstUnion :: s1:_ -> s2:_ -> s:_
   -> { freeVarsSubst (union s1 s2) s
          == union (freeVarsSubst s1 s) (freeVarsSubst s2 s) }
 
-lemma_freeVarsSubst_extend
+lemmaFreeVarsSubstExtend
   :: scope:_ -> used:_
   -> i:_ -> {e:_ | Data.Set.null (intersection (freeVars e) scope)}
   -> s:Subst (ScopedExp scope)
@@ -449,10 +462,10 @@ check it, which is additional effort. Here's the proof for
 \tc{lemma\_free\-Vars\-Subst\_union}.
 
 \begin{verbatim}
-lemma_freeVarsSubst_union :: Set Int -> Set Int -> Subst Exp -> ()
-lemma_freeVarsSubst_union _ _ [] = ()
-lemma_freeVarsSubst_union s1 s2 ((i, _) : xs) =
-  lemma_freeVarsSubst_union
+lemmaFreeVarsSubstUnion :: Set Int -> Set Int -> Subst Exp -> ()
+lemmaFreeVarsSubstUnion _ _ [] = ()
+lemmaFreeVarsSubstUnion s1 s2 ((i, _) : xs) =
+  lemmaFreeVarsSubstUnion
     (difference s1 (singleton i)) (difference s2 (singleton i)) xs
 \end{verbatim}
 
@@ -465,10 +478,10 @@ Then the lemmas need to be applied in the cases of \tc{substitute}.
 substitute scope s e0 = case e0 of
   Var i -> case lookupSubst i s of
     Nothing -> e0
-    Just e -> e ? lemma_freeVarsSubst_sing i s
+    Just e -> e ? lemmaFreeVarsSubstSing i s
   App e0 e1 ->
     App (substitute scope s e0) (substitute scope s e1)
-      ? lemma_freeVarsSubst_union (freeVars e0) (freeVars e1) s
+      ? lemmaFreeVarsSubstUnion (freeVars e0) (freeVars e1) s
   Lam i e
     ...
 \end{verbatim}
@@ -704,16 +717,18 @@ If we substitute \tc{t} by \tc{substitute s'} in the last conjunct, we get that 
 need to prove
 
 \begin{verbatim}
-IntMap.isSubsetOf (scopesTerm (substitute s' t0)
-                  (IntMap.union (scopesTerm t0) (scopesTerm t1))
+IntMap.isSubsetOf
+  (scopesTerm (substitute s' t0)
+  (IntMap.union (scopesTerm t0) (scopesTerm t1))
 \end{verbatim}
 
 Liquid Haskell does compute this on its own. Then we can use the fact that substitution
 preserves the skolems returned by \tc{scopesTerm} to arrive at
 
 \begin{verbatim}
-IntMap.isSubsetOf (scopesTerm t0)
-                  (IntMap.union (scopesTerm t0) (scopesTerm t1))
+IntMap.isSubsetOf
+  (scopesTerm t0)
+  (IntMap.union (scopesTerm t0) (scopesTerm t1))
 \end{verbatim}
 
 And this statement the SMT solver can prove on its own using the theory of arrays,
@@ -722,7 +737,8 @@ is the property relating \tc{substitute} and \tc{scopesTerm}.
 
 \begin{verbatim}
 lemmaSubstituteScopesTerm
-  :: s:Subst {ti:Term | isVar ti} -> t:Term
+  :: s:Subst {ti:Term | isVar ti}
+  -> t:Term
   -> { scopesTerm t = scopesTerm (substitute s t) }
 \end{verbatim}
 
@@ -806,7 +822,8 @@ consistentSkolemScopes :: Formula -> Bool
 consistentSkolemScopes (Forall _ f) = consistentSkolemScopes f
 consistentSkolemScopes (Exists _ f) = consistentSkolemScopes f
 consistentSkolemScopes (Conj f1 f2) =
-      consistentSkolemScopes f1 && consistentSkolemScopes f2
+      consistentSkolemScopes f1
+  && consistentSkolemScopes f2
   &&  unionCommutes (scopes f1) (scopes f2)
 consistentSkolemScopes (Then (t0, t1) f2) =
      consistentSkolemScopes f2
@@ -826,12 +843,14 @@ kicks in to establish the first conjunct of the refinement type:
 unionCommutes (scopes f1) (scopes f2)
 =>
 (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f1)) =>
-  isSubsetOfJust (freeVars t)
-                 (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
+  isSubsetOfJust
+    (freeVars t)
+    (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
 &&
 (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f2)) =>
-  isSubsetOfJust (freeVars t)
-                 (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
+  isSubsetOfJust
+    (freeVars t)
+    (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
 \end{verbatim}
 
 The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
@@ -883,7 +902,7 @@ needs to be implemented.
 
 There are syntax changes needed in the annotations of Liquid Haskell to support
 this, and there is a limitation to overcome in old versions of SMTLIB, the standard
-interface to SMT solvers \cite{BarFT-RR-25} that require user defined functions to
+interface to SMT solvers~\cite{BarFT-RR-25} that require user defined functions to
 have monomorphic types. While newer versions of the standard allow for polymorphic
 types, these still need to be implemented by SMT solvers.
 
@@ -892,21 +911,27 @@ associates keys with values, and which has an equality predicate.
 The implementation of union, intersection, difference, and subset checks, however,
 need operations beyond the standard interface, and each SMT solver has its own
 solutions to offer. In our implementation we used the \tc{map} operation of the
-Z3 SMT solver, akin to Haskell's \tc{IntMap.unionWith}. The following snippet
-contains the implementation of \tc{intMapIsSubsetOf} in SMTLIB.
+Z3 SMT solver. The following snippet contains the implementation of
+\tc{intMapIsSubsetOf} in SMTLIB.
 
 \begin{verbatim}
 ; Similar to Maybe a
 (declare-datatype Option (par (a) (None (Some (someVal a)))))
+
 ; Similar to do {a0 <- oa0; a1 <- oa1; guard (a0 /= a1); pure a}
 (define-fun difference_strict_p2p
-  ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int))
+  ((oa0 (Option (Set Int)))
+   (oa1 (Option (Set Int))))
+  (Option (Set Int))
   (match oa0
     ((None None)
      ((Some a0) (match oa1
                   ((None oa0)
                    ((Some a1) (ite (= a0 a1) None oa0))))))))
-; Similar to empty == unionWith difference_strict_p2p x y
+
+; Similar to: empty == zipWith difference_strict_p2p x y
+; where zipWith applies the function pointwise to the values in the
+; arrays
 (define-fun IntMapSetInt_isSubsetOf
   ((x (Array Int (Option (Set Int))))
    (y (Array Int (Option (Set Int)))))
@@ -921,11 +946,85 @@ be about ill-resolved names when translating Haskell identifiers to the
 logic language, and there is one example of a function rejected by the
 termination checker that should arguably be accepted.
 
+In our code we have been using the simplest possible style of programming.
+There are no GADTs, no type families, not even type classes, though
+Liquid Haskell has some support for type classes~\cite{liu20}. At the moment,
+pushing for more demanding programming patterns is likely to surface more
+inconveniences for those aiming to use the tool for a particular goal.
+Aiming for the simplest style is, therefore, a constraint of the current
+implementation, unless one is willing to contribute fixes. On the bright
+side, none of the difficulties that we have encountered so far are likely to
+require breakthroughs in computing to address them.
 
-\subsection{Limitations of SMT solvers for programming}
+
+\subsection{SMT solvers for programming}
 \label{limitations-of-SMT-solvers}
 
+As the case studies in this paper show, SMT solvers can go a long way in
+automating static checks. Insight from the user is necessary, however,
+when the properties to check are not handled by any of the theories in the
+solver.
 
+When the property involves user defined recursive functions,
+sometimes it still can be proved automatically if it is attached to the
+refinement type signature of the function. This is the case of the refinement
+types of functions \tc{substitute} and \tc{unification}, where the recursion
+of the proof supports the inductive reasoning required to established the
+property.
+
+When the property cannot be expressed in the signature of a recursive function,
+like the lemmas that have been presented, writing lemmas becomes necessary. The
+inconvenience is two-fold. In the one hand, the lemma needs to be precisely
+written and then demonstrated. And in the other hand, the user needs to figure
+out the right set of parameters to apply it to at the sites where it is needed.
+
+These inconveniences are alleviated by the fact that one can still use the
+SMT solvers to write abbreviated demonstrations of the lemmas. Additionally,
+it would be plausible that one can rely on additional mechanisms to help
+discover the parameters to which they are applied. In the case of Liquid
+Haskell, there is an implementation of automatic rewrite rules~\cite{grannan22}
+that is meant to address the problem for lemmas about equalities.
+
+It would be possible to ask the SMT solver to instantiate the lemma parameters
+as needed by introducing assertions with universal quantification. For instance,
+assume that \tc{lemmaFreeVarsSubstUnionGoal} stands for the returned
+refinement type of lemma \tc{lemmaFreeVarsSubstUnion}.
+
+\begin{verbatim}
+(assert (forall ((s (Subst Term)) (t Term)) (lemmaFreeVarsSubstUnionGoal s t)))
+\end{verbatim}
+
+When trying to see whether other assertions can be satisfied, the SMT solver
+will try to use the universally quantified assertion. Unfortunately, the
+behavior of the procedures to find instantiations for quantified variables are
+not easy to predict, and require configuring the solver with fuel parameters to
+limit how much effort is devoted to the task. This is why Liquid Haskell refrains
+from doing it.
+
+On the performance front, all of the SMTLIB queries in the unification example run
+in 2 seconds, 0.5 seconds for \tc{Subst3.hs}, and 0.03 seconds in \tc{Subst4.hs}.
+That is sometimes faster than it takes to compile the modules with the GHC compiler,
+except in the case of unification. Where things get slower is when measuring Liquid
+Haskell, which spends several seconds checking the examples and interacting with the
+SMT solver (8 seconds checking unification, 2.5 seconds checking \tc{Subst3.hs},
+2 seconds checking \tc{Subst4.hs}). The authors deem that performance of Liquid Haskell
+can be improved but likely not below what the SMT solver can deliver.
+
+Other than using an SMT solver in the fashion of Liquid Haskell, F*, Why3 or Dafny,
+the alternatives to implementing interface checks are either to encode the checks in
+the type-checker, or to migrate to a dependently typed language and then hope to
+translate back the checked programs to the original language. Of these alternatives,
+we feel like using the type-checker is among the most pragmatic. MacLaurin et al. make
+a fine demonstration about the foil.
+
+Perhaps one of the biggest compromises when encoding properties in the type-checker
+is that one needs to narrow the supported properties to a feasible set that allows
+to write a library. If we wanted to add static checks like those of the unification
+example, it is unlikely that we would come across such a dedicated library, if one
+wasn't written to reason about skolems and their domains.
+
+
+Compare to the foil once more.
 
 \section{Conclusions}
 \label{conclusions}
