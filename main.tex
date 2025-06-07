@@ -79,9 +79,10 @@ where we compare with an earlier attempt based on the Haskell type checker and k
 (Section~\ref{capture-avoiding-substitution}). Later on, we implement safety checks
 in an implementation of unification (Section~\ref{unification}), a more demanding
 example where extending earlier approaches would be some challenge. Our
-attempt with unification is only partially successful, since we had to
-modify the Liquid Haskell implementation to support it, modifications which
-constitute our third contribution. Lastly, we offer an informed discussion
+attempt with unification is only partially successful since we had to
+modify the Liquid Haskell implementation to support it. This modifications
+constitute our third contribution, and demonstrate the technical feasibility
+of the approach. Lastly, we offer a discussion
 of the limitations of both the Liquid Haskell implementation (Section~\ref{limitations-of-liquid-haskell}) and the
 general approach of integrating SMT solvers via refinement
 types (Section~\ref{limitations-of-SMT-solvers}). As an advancement, we
@@ -509,10 +510,8 @@ after our next case study.
 
 In this section we look now at another example where we can put the set theory
 of SMT solvers to work for us. This is conditional unification of a form of
-hereditary Harrop formulas. Unlike in the previous section, the reasoning
-presented in this section is not fully implemented in Liquid Haskell, and this
-is why our achievement is partial. In Section~\ref{limitations-of-liquid-haskell}
-we discuss the unimplemented parts.
+hereditary Harrop formulas. The source code of this section can be found in
+\sourcefile{Unif2.hs}.
 
 As before, variables are represented as integers, and we also have a form of
 skolem function application $f(t_0,\ldots,t_n)$ represented as a pair
@@ -630,7 +629,7 @@ unifyEq
       , { t:Term |
             isSubsetOfJust (freeVars t)
               (IntMap.lookup v
-			    (IntMap.union (scopesTerm t0) (scopesTerm t1)))
+                (IntMap.union (scopesTerm t0) (scopesTerm t1)))
           && not (Set.member v (skolemSet t))
           && intMapIsSubsetOf (scopesTerm t)
                (IntMap.union (scopesTerm t0) (scopesTerm t1))
@@ -646,7 +645,7 @@ the substitution.
 \begin{verbatim}
 scopesTerm :: Term -> IntMap (Set Int)
 scopesTerm (V i) = IntMap.empty
-scopesTerm (SA (i, s)) = IntMap.singleton i (domain s)
+scopesTerm (SA (i, s)) = IntMap.insert i (domain s) (scopesSubst s)
 scopesTerm U = IntMap.empty
 scopesTerm (L t) = scopesTerm t
 scopesTerm (P t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
@@ -655,6 +654,8 @@ scopesTerm (P t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
 In this function we are using the data type \tc{IntMap}, also coming from the
 package \tc{containers}. Liquid Haskell can link the calls in this function
 with the array theory that is used to represent maps in the SMT solver.
+The function \tc{scopesSubst} provides the skolems present in the range of
+the substitution.
 
 We define the predicate \tc{isSubsetOfJust} to say that the lookup succeeds
 and that it yields a superset of the first argument.
@@ -736,6 +737,30 @@ isVar _ = False
 {-@ inverseSubst :: Subst Term -> {v:Subst {t:Term | isVar t} @-}
 \end{verbatim}
 
+Here is the proof of the lemma, which follows the recursive structure
+of function \tc{substitute}.
+
+\begin{verbatim}
+lemmaSubstituteScopesTerm :: Subst Term -> Term -> ()
+lemmaSubstituteScopesTerm s (SA (_, s1)) = lemmaComposeSubstDomain s1 s
+lemmaSubstituteScopesTerm s U = ()
+lemmaSubstituteScopesTerm s (L t) = lemmaSubstituteScopesTerm s t
+lemmaSubstituteScopesTerm s (P t0 t1) =
+    lemmaSubstituteScopesTerm s t0 `seq` lemmaSubstituteScopesTerm s t1
+lemmaSubstituteScopesTerm s (V v) = case lookupSubst v s of
+    { Nothing -> (); Just (V _) -> (); Just _ -> () }
+\end{verbatim}
+
+We cut the proof in the case of skolems with an assumption about the
+skolems and domains of compositions of substitutions.
+
+\begin{verbatim}
+assume lemmaComposeSubstDomain
+  :: s0:Subst Term -> s1:Subst {t:_ | isVar t}
+  -> {   domain s0 == domain (composeSubst s0 s1)
+      && scopesSubst s0 == scopesSubst (composeSubst s0 s1) }
+\end{verbatim}
+
 
 \subsection{Checking \tc{unify}}
 
@@ -810,27 +835,15 @@ unionCommutes (scopes f1) (scopes f2)
 \end{verbatim}
 
 The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
-in the refinement type of the input. The second conjunct of the refinement type
+in the refinement type of the input. The consequent relates the refinement types
+of the recursive calls to the expected refinement type of the result, as Liquid
+Haskell knows that \tc{IntMap.\allowbreak union (scopes f1) (scopes f2)} stands for
+\tc{scopes (Conj f1 f2)}. The second conjunct of the refinement type
 is accepted as it is established by the recursive calls and \tc{unifyEq}
 as is.
 
 The other equations in \tc{unify} are checked using similar reasoning, all of it
-automatic except for a lemma that relates the function \tc{fromListSubst} with
-the skolems present in the terms of the resulting substitution.
-
-\begin{verbatim}
-assume lemmaScopeSubstSubset
-  :: m0:IntMap (Set Int)
-  -> s:Subst {t:Term | intMapIsSubsetOf (scopesTerm t) m0}
-  -> { intMapIsSubsetOf (scopesSubst s) m0 }
-\end{verbatim}
-
-Here the function \tc{scopesSubst} provides the skolems present in the range of
-the substitution. This lemma and function \tc{scopesSubst} depend on the representation
-of substitutions and therefore are assumed to work as the refinement type
-signature describes for the sake of this study. The lemma is used to relate
-the skolems in the substitution \tc{unifsT1Subst} in the implication equation of
-\tc{unify} with the skolems of the input formula.
+automatic except for a lemma in the implication equation.
 
 \begin{verbatim}
 unify f@(Then (t0, t1) f2) =
@@ -840,22 +853,73 @@ unify f@(Then (t0, t1) f2) =
           ? lemmaScopeSubstSubset (scopes f) unifsT1Subst
 \end{verbatim}
 
-TODO
-\begin{itemize}
-\item write a version of Unif2.hs that has terminationUnifyEq and lemmaSubstituteScopesTerm
-\item show the proof of lemmaSubstituteScopesTerm
-\item test in an example that consistentSkolemScopes works as we expect
-\item (defer discussing the workaround lemmas to the section on limitations).
-\end{itemize}
+The lemma relates the skolems in the substitution \tc{unifsT1Subst}
+with the skolems of the input formula.
+
+\begin{verbatim}
+assume lemmaScopeSubstSubset
+  :: m0:IntMap (Set Int)
+  -> s:Subst {t:Term | intMapIsSubsetOf (scopesTerm t) m0}
+  -> { intMapIsSubsetOf (scopesSubst s) m0 }
+\end{verbatim}
+
+This lemma depends on the representation of substitutions and therefore is
+assumed to work as the refinement type signature describes for the sake of
+this study.
 
 
 \subsection{Limitations of Liquid Haskell}
 \label{limitations-of-liquid-haskell}
 
-The checking of unification is a plausible future, though one that requires a
-modest enhancement to Liquid Haskell. At the moment Liquid Haskell does not
-allow to implement maps.
+The checking of unification is a plausible future, though one that requires
+some enhancements to Liquid Haskell and several bug fixes. Liquid Haskell does
+not support reasoning with \tc{Map}s or \tc{IntMap}s at the
+moment.\footnote{Issue to support maps in the Liquid Haskell repository: \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}} Our
+modifications to Liquid Haskell allow us to reason with the type
+\tc{IntMap (Set Int)}. While these modifications can be easily adapted to
+support other instantiations of \tc{Map a b} or \tc{IntMap b}, a general
+solution that can be reused for any instantiation of the type parameters still
+needs to be implemented.
 
+There are syntax changes needed in the annotations of Liquid Haskell to support
+this, and there is a limitation to overcome in old versions of SMTLIB, the standard
+interface to SMT solvers \cite{BarFT-RR-25} that require user defined functions to
+have monomorphic types. While newer versions of the standard allow for polymorphic
+types, these still need to be implemented by SMT solvers.
+
+Maps can be implemented with the theory of arrays. An array is an entity that
+associates keys with values, and which has an equality predicate.
+The implementation of union, intersection, difference, and subset checks, however,
+need operations beyond the standard interface, and each SMT solver has its own
+solutions to offer. In our implementation we used the \tc{map} operation of the
+Z3 SMT solver, akin to Haskell's \tc{IntMap.unionWith}. The following snippet
+contains the implementation of \tc{intMapIsSubsetOf} in SMTLIB.
+
+\begin{verbatim}
+; Similar to Maybe a
+(declare-datatype Option (par (a) (None (Some (someVal a)))))
+; Similar to do {a0 <- oa0; a1 <- oa1; guard (a0 /= a1); pure a}
+(define-fun difference_strict_p2p
+  ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int))
+  (match oa0
+    ((None None)
+     ((Some a0) (match oa1
+                  ((None oa0)
+                   ((Some a1) (ite (= a0 a1) None oa0))))))))
+; Similar to empty == unionWith difference_strict_p2p x y
+(define-fun IntMapSetInt_isSubsetOf
+  ((x (Array Int (Option (Set Int))))
+   (y (Array Int (Option (Set Int)))))
+  Bool
+  (= ((as const (Array Int (Option (Set Int)))) None)
+     ((_ map IntMapSetInt_difference_strict_p2p) x y)))
+\end{verbatim}
+
+The source code of our unification example lists various defects to fix
+in the user experience that required workarounds. A few of them seem to
+be about ill-resolved names when translating Haskell identifiers to the
+logic language, and there is one example of a function rejected by the
+termination checker that should arguably be accepted.
 
 
 \subsection{Limitations of SMT solvers for programming}
