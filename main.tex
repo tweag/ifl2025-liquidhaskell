@@ -85,9 +85,18 @@ constitute our third contribution, and demonstrate the technical feasibility
 of the approach. Lastly, we offer a discussion
 of the limitations of both the Liquid Haskell implementation (Section~\ref{limitations-of-liquid-haskell}) and the
 general approach of integrating SMT solvers via refinement
-types (Section~\ref{SMT-solvers-interface-checks}). As an advancement, we
-anticipate many scenarios where the integration of SMT
-solvers makes programming more pleasant and static checks more powerful.
+types (Section~\ref{SMT-solvers-interface-checks}).
+
+Over the years SMT solvers have been used effectively to statically check pointer
+arithmetic, memory safety, side-channel safety in cryptographic algorithms,
+safe parsing of binary input, data structure invariants, data access policies in web applications,
+commutativity of operations on replicated data types, and causal ordering in
+broadcast protocols. There is no question of whether SMT solvers are
+helpful but whether they can be integrated conveniently in everyday
+programming, or more specifically in this article, in offloading safety static
+checks from the type checker.
+We anticipate that the integration of SMT solvers will make programming more
+pleasant and static checks more powerful in these and other scenarios to come.
 
 
 \section{Capture-avoiding substitutions}
@@ -1142,7 +1151,6 @@ assist these calculations one day.
 
 TODO: search for similar discussion about the convenience of refinement types in the literature
 
-Discuss generality of the approach.
 
 \section{Conclusions}
 \label{conclusions}
