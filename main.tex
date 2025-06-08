@@ -65,20 +65,19 @@
 
 \section{Introduction}
 
-Application programming interfaces (APIs) in programming languages are described
-with the types of their operations and additional documentation expressed by
-other means than the programming language itself.
+Application Programming Interfaces (APIs) in programming languages are
+typically described with the types of their operations alongside
+supplementary documentation.
 
 In strongly typed languages, the author of an interface can aim to enrich the
 types to represent most of the constraints and relationships between the
 operations, or she could decide to keep the types as simple as possible.
 
-The advantage of rich types is that the type checker is involved in detecting
-misuse of the interface, thus preventing execution failures or returning
-incorrect results. But the enrichment always comes at the cost of more
-complexity when using the interface, which in the extreme can make the
-interface too difficult to use as well. The author is then forced into a
-balancing act.
+Rich types enable the type checker to detect interface misuse,
+thus preventing execution failures or
+incorrect results. However, this richness often increases interface complexity,
+potentially making it cumbersome to use. Developers must therefore strike a
+balancing.
 
 The options are not just to lean or not to lean on the type checker, though. In
 this paper we analyze a couple of use cases in the Haskell programming language
@@ -128,7 +127,7 @@ as in $(\lambda z. y)[y:=z]$, we obtain $\lambda z. z$, the identity function!
 This change of meaning is often unwanted and is caused by the binder capturing
 free variables in $t$.
 
-Avoiding name captures efficiently is the subject of a few approaches. One of them,
+Several approaches exist to avoid name captures efficiently. One of them,
 called \textit{the rapier}, is used in the GHC compiler. The rapier requires the
 implementation of substitutions to carry an additional \textit{scope} set containing all the
 variables that appear free in the result of the substitution. This set is
@@ -346,7 +345,7 @@ freeVars e = case e of
   Lam i e -> difference (freeVars e) (singleton i)
 \end{verbatim}
 
-Lastly there is the function \tc{domain} that is defined only in the logic
+Lastly, there is the function \tc{domain} defined solely within the logic
 language.
 
 \begin{verbatim}
@@ -355,7 +354,7 @@ language.
 
 This is the way in which uninterpreted functions are declared. The function
 \tc{domain} stands for the set of variables in the domain of a substitution.
-Liquid Haskel doesn't know anything more about it than its type signature,
+Liquid Haskell doesn't know anything more about it than its type signature,
 but the user can enrich such knowledge within the refinement type signatures
 of the substitution operations that manipulate the domain.
 
@@ -529,7 +528,7 @@ in our repository.
 
 \subsection{Comparison}
 
-Liquid Haskell can ensure most of the requirements with little assistance
+Liquid Haskell ensures most requirements with little assistance
 because it is delegating much of the work to an underlying SMT solver.
 SMT solvers are tools that decide whether (usually first order) logic formulas are
 satisfiable and provide dedicated mechanisms to reason about various theories
@@ -560,7 +559,7 @@ of SMT solvers to work for us. This is conditional unification of a form of
 hereditary Harrop formulas. The source code of this section can be found in
 \sourcefile{Unif2.hs}.
 
-As before, variables are represented as integers, and we also have a form of
+Here, variables are again represented as integers, and we also have a form of
 skolem function application $f(t_0,\ldots,t_n)$ represented as a pair
 $(f, [x_0:=t_0,\ldots,x_n:=t_n])$, where $x_0 \ldots x_n$ are the only free
 variables allowed in the solutions of $f$.
@@ -1177,17 +1176,17 @@ with more traditional approaches based on type checking with strong types. In
 our analysis, we tested the ability of SMT solvers to effectively automatize
 the static checks otherwise left to the type system.
 
-We found that refinement types allow to express properties in a fairly direct
-style when the theories at work are supported by the SMT solver. Reasoning
+We found that refinement types enable a direct expression of properties,
+particularly when the SMT solver supports the relevant theories. Reasoning
 mechanisms are reused from the existing tooling, instead of encoding them
 in the type checker. This makes easier both implementing static checks and
 composing the properties coming from different sources.
 
-However, the integration of SMT solvers for static checks still poses a few
+However, integrating SMT solvers for static checks still presents some
 challenges. One of them is maturing the existing integrations until they are
 feasible to use in industrial setting. Another one is deriving useful
 corrective actions from the error messages. And a last challenge is lowering
-the checking overhead until is is close to the time required for SMT queries
+the checking overhead until it is close to the time required for SMT queries
 alone.
 
 The generality of the approach, and the simplicity with which it enables
