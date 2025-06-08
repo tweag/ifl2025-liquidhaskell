@@ -85,7 +85,7 @@ constitute our third contribution, and demonstrate the technical feasibility
 of the approach. Lastly, we offer a discussion
 of the limitations of both the Liquid Haskell implementation (Section~\ref{limitations-of-liquid-haskell}) and the
 general approach of integrating SMT solvers via refinement
-types (Section~\ref{limitations-of-SMT-solvers}). As an advancement, we
+types (Section~\ref{SMT-solvers-interface-checks}). As an advancement, we
 anticipate many scenarios where the integration of SMT
 solvers makes programming more pleasant and static checks more powerful.
 
@@ -363,6 +363,7 @@ contain the binder variable, the substitution is not accepted without extending
 it first.
 
 \subsection{Ensuring the scope set is checked}
+\label{ensuring-the-scope-set-is-checked}
 
 Checking that the scope set is actually used, and therefore that binders to rename
 are not forgotten, admits at least two approaches. In both cases we will prevent
@@ -442,7 +443,7 @@ function.
 
 \begin{verbatim}
 lemmaFreeVarsSubstSing :: i:_ -> s:_
-  -> { freeVarsSubst (singleton i) s == freeVarsMaybe (lookupSubst i s) }
+  -> { freeVarsSubst (singleton i) s == fromMaybe empty (lookupSubst i s) }
 
 lemmaFreeVarsSubstUnion :: s1:_ -> s2:_ -> s:_
   -> { freeVarsSubst (union s1 s2) s
@@ -483,7 +484,13 @@ substitute scope s e0 = case e0 of
     App (substitute scope s e0) (substitute scope s e1)
       ? lemmaFreeVarsSubstUnion (freeVars e0) (freeVars e1) s
   Lam i e
-    ...
+    | member i scope,
+      let j = freshVar scope ->
+        Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
+          ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var j) s
+    | otherwise ->
+        Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+          ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var i) s
 \end{verbatim}
 
 The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
@@ -515,8 +522,9 @@ think carefully about how to encode the various static checks with the
 type checker, a non trivial supporting library needs to be written,
 and the effort might need further iterations when accounting for
 additional properties.
-We will have more to say on the experience of implementing API checks
-after our next case study.
+After our next case study, we will have more to say on the experience
+of implementing interface checks in Section~\ref{SMT-solvers-for-interface-checks}.
+
 
 \section{Unification}
 \label{unification}
@@ -909,8 +917,8 @@ types, these still need to be implemented by SMT solvers.
 Maps can be implemented with the theory of arrays. An array is an entity that
 associates keys with values, and which has an equality predicate.
 The implementation of union, intersection, difference, and subset checks, however,
-need operations beyond the standard interface, and each SMT solver has its own
-solutions to offer. In our implementation we used the \tc{map} operation of the
+need operations beyond the standard interface, and not all SMT solver can support
+them. In our implementation we used the \tc{map} operation of the
 Z3 SMT solver. The following snippet contains the implementation of
 \tc{intMapIsSubsetOf} in SMTLIB.
 
@@ -929,15 +937,15 @@ Z3 SMT solver. The following snippet contains the implementation of
                   ((None oa0)
                    ((Some a1) (ite (= a0 a1) None oa0))))))))
 
-; Similar to: empty == zipWith difference_strict_p2p x y
+; Similar to: empty == zipWith difference_strict_p2p xs ys
 ; where zipWith applies the function pointwise to the values in the
 ; arrays
 (define-fun IntMapSetInt_isSubsetOf
-  ((x (Array Int (Option (Set Int))))
-   (y (Array Int (Option (Set Int)))))
+  ((xs (Array Int (Option (Set Int))))
+   (ys (Array Int (Option (Set Int)))))
   Bool
   (= ((as const (Array Int (Option (Set Int)))) None)
-     ((_ map IntMapSetInt_difference_strict_p2p) x y)))
+     ((_ map IntMapSetInt_difference_strict_p2p) xs ys)))
 \end{verbatim}
 
 The source code of our unification example lists various defects to fix
@@ -957,8 +965,8 @@ side, none of the difficulties that we have encountered so far are likely to
 require breakthroughs in computing to address them.
 
 
-\subsection{SMT solvers for programming}
-\label{limitations-of-SMT-solvers}
+\section{Evaluation of SMT solvers for interface checks}
+\label{SMT-solvers-for-interface-checks}
 
 As the case studies in this paper show, SMT solvers can go a long way in
 automating static checks. Insight from the user is necessary, however,
@@ -987,14 +995,18 @@ that is meant to address the problem for lemmas about equalities.
 
 It would be possible to ask the SMT solver to instantiate the lemma parameters
 as needed by introducing assertions with universal quantification. For instance,
-assume that \tc{lemmaFreeVarsSubstUnionGoal} stands for the returned
-refinement type of lemma \tc{lemmaFreeVarsSubstUnion}.
+assume that \tc{lemma\-FreeVars\-Subst\-Union\-Goal} stands for the returned
+refinement type of lemma \tc{lemma\-FreeVars\-Subst\-Union}.
 
 \begin{verbatim}
-(assert (forall ((s (Subst Term)) (t Term)) (lemmaFreeVarsSubstUnionGoal s t)))
+(assert
+  (forall
+    ((s (Subst Term))
+     (t Term))
+    (lemmaFreeVarsSubstUnionGoal s t)))
 \end{verbatim}
 
-When trying to see whether other assertions can be satisfied, the SMT solver
+When checking satisfiability of other assertions, the SMT solver
 will try to use the universally quantified assertion. Unfortunately, the
 behavior of the procedures to find instantiations for quantified variables are
 not easy to predict, and require configuring the solver with fuel parameters to
@@ -1018,13 +1030,119 @@ we feel like using the type-checker is among the most pragmatic. MacLaurin et al
 a fine demonstration about the foil.
 
 Perhaps one of the biggest compromises when encoding properties in the type-checker
-is that one needs to narrow the supported properties to a feasible set that allows
-to write a library. If we wanted to add static checks like those of the unification
-example, it is unlikely that we would come across such a dedicated library, if one
-wasn't written to reason about skolems and their domains.
+is that one needs to narrow the expressible properties to a feasible set that allows
+to write a supporting library. If we wanted to have static checks like those of the
+unification example, ensuring that the return terms satisfy the scope check and the
+occurs check would require new type encodings. Or in other words, new type indices
+need to be conceived to relate the parameters of the function \tc{unify}.
+$$\mathit{unify} :: \mathit{Formula}\ f_1 \ldots f_n -> [(\mathit{Var}\ v_1 \ldots v_m, \mathit{Term}\ t_1 \ldots t_r)]$$
 
+Then there would be the effort of writing a library, and later on there would be the
+effort of composing the encodings of different libraries when more than one such
+is needed. Suppose we wanted to check in the unification example that the
+function to apply substitutions passes the static checks of
+Section~\ref{capture-avoiding-substitution}. With
+refinement types we need to add the corresponding conjuncts to the predicates.
 
-Compare to the foil once more.
+\begin{verbatim}
+- substituteFormula
+-   :: Set Int
+-   -> Subst Term
+-   -> f:Formula
+-   -> {v:Formula | formulaSize f == formulaSize v}
+-
++ type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
++ type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
++
++ substituteFormula
++   :: scope:Set Int
++   -> s:Subst (ScopedTerm scope)
++   -> f:ScopedFormula (domain s)
++   -> {v:ScopedFormula scope | formulaSize f == formulaSize v}
+\end{verbatim}
+
+Less planning and setup seems necessary when composing refinement types, and
+then we can hope SMT solvers to continue to check the same constraints
+they were fed when the properties where checked in isolation.
+
+The type-checker approach, however, is likely to produce error messages that
+are easier to fix, provided that the user goal is feasible.
+The user is guided into correcting the errors
+by the types and the operations of the supporting library. With SMT solvers,
+there is always the question of whether a goal is provable or not in the
+theories at hand. Is there some additional lemma that is necessary about the user defined
+functions? The user has to figure it out on her own. How are the assumptions
+insufficient to prove the goal? The user has to compute it on her own too,
+although it is plausible that counterexamples can be proposed by the
+tooling when the integration matures.
+
+As an example, let us consider the lemma \tc{lemma\-FreeVars\-Subst\-Union} discussed in
+Section~\ref{ensuring-the-scope-set-is-checked}.
+If we drop this lemma from the definition of \tc{substitute}, we get the following
+error message, heavily edited for presentation.
+
+\begin{verbatim}
+tests/rapier/Subst3.hs:141:7: error:
+    Liquid Type Mismatch
+    The inferred type
+      VV : {v : Exp | v == App ?b ?c
+                      && freeVars v == union (freeVars ?b) (freeVars ?c)}
+    is not a subtype of the required type
+      VV : {VV : Exp | freeVars VV == freeVarsSubst (freeVars ?a) s}
+    in the context
+      ?c : {?c : Exp | ?c == substitute scope s e1
+                       && freeVars ?c == freeVarsSubst (freeVars e1) s}
+
+      ?b : {?b : Exp | ?c == substitute scope s e0
+                       && freeVars ?b == freeVarsSubst (freeVars e0) s}
+
+      ?a : {?a : Exp | isSubset (freeVars ?a) (domain s)
+                       && ?a == App e0 e1
+                       && freeVars ?a == union (freeVars e0) (freeVars e1)}
+
+      scope : Set Int
+      s : Subst Exp
+      e0 : Exp
+      e1 : Exp
+    Constraint id 33
+    |
+141 |       App (substitute scope s e0) (substitute scope s e1)
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+\end{verbatim}
+
+We can get quickly that the goal is the returned refinement type of \tc{substitute}.
+But to get at the missing lemma, we need to calculate with the assumptions that
+Liquid Haskell has presented.
+To start, we could substitute \tc{freeVars VV} in the goal with what the predicate
+in the inferred refinement type defines it to be.
+
+\begin{verbatim}
+union (freeVars ?b) (freeVars ?c) == freeVarsSubst (freeVars ?a) s
+\end{verbatim}
+
+Then we could substitute the various calls to \tc{freeVars} with what
+the refinement types of \tc{?a}, \tc{?b}, and \tc{?c} define them to be.
+
+\begin{verbatim}
+union (freeVarsSubst (freeVars e0) s) (freeVarsSubst (freeVars e1) s)
+  == freeVarsSubst (union (freeVars e0) (freeVars e1)) s
+\end{verbatim}
+
+We have already a first sight of the missing assumption, but to get from
+there to the statement of \tc{lemmaFreeVarsSubstUnion}, we still need
+to generalize the calls to \tc{freeVars}.
+
+\begin{verbatim}
+freeVarsSubst (union s1 s2) s ==
+  union (freeVarsSubst s1 s) (freeVarsSubst s2 s)
+\end{verbatim}
+
+It is an open question whether we can hope the tooling to effectively
+assist these calculations one day.
+
+TODO: search for similar discussion about the convenience of refinement types in the literature
+
+Discuss generality of the approach.
 
 \section{Conclusions}
 \label{conclusions}
