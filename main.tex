@@ -44,6 +44,23 @@
 }
 
 \begin{document}
+\begin{abstract}
+    This paper explores the use of Satisfiability Modulo Theories (SMT) solvers,
+    specifically through Liquid Haskell, to enhance static checks of
+    programming language interfaces. Traditional approaches in strongly typed
+    languages balance type richness with interface usability. We present a
+    third alternative: leveraging SMT solvers via refinement types to offload
+    static checks from the type checker. Our study includes a comparative
+    analysis of capture-avoiding substitution, demonstrating the advantages of
+    Liquid Haskell over type-checker-based methods. Furthermore, we investigate
+    the application of SMT solvers to unification, a more complex scenario,
+    highlighting both the capabilities and current limitations of this
+    approach. We showcase modifications to Liquid Haskell to support these
+    advanced checks, demonstrating technical feasibility. The paper also
+    argues for the broad applicability of SMT solvers in ensuring various
+    program properties, suggesting that their integration can significantly
+    improve both the power and convenience of static checks in programming.
+\end{abstract}
 \maketitle
 
 \section{Introduction}
@@ -59,7 +76,7 @@ operations, or she could decide to keep the types as simple as possible.
 The advantage of rich types is that the type checker is involved in detecting
 misuse of the interface, thus preventing execution failures or returning
 incorrect results. But the enrichment always comes at the cost of more
-complexity in the usage of the interface, which in the extreme can make the
+complexity when using the interface, which in the extreme can make the
 interface too difficult to use as well. The author is then forced into a
 balancing act.
 
