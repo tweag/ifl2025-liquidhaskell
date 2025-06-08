@@ -1147,6 +1147,27 @@ Discuss generality of the approach.
 \section{Conclusions}
 \label{conclusions}
 
+We have presented two case studies to contrast the use of SMT solvers
+with more traditional approaches based on type checking with strong types. In
+our analysis, we tested the ability of SMT solvers to effectively automatize
+the static checks otherwise left to the type system.
+
+We found that refinement types allow to express properties in a fairly direct
+style when the theories at work are supported by the SMT solver. Reasoning
+mechanisms are reused from the existing tooling, instead of encoding them
+in the type checker. This makes easier both implementing static checks and
+composing the properties coming from different sources.
+
+However, the integration of SMT solvers for static checks still poses a few
+challenges. One of them is maturing the existing integrations until they are
+feasible to use in industrial setting. Another one is deriving useful
+corrective actions from the error messages. And a last challenge is lowering
+the checking overhead until is is close to the time required for SMT queries
+alone.
+
+The generality of the approach, and the simplicity with which it enables
+composition of different static checks, are unique features that make it a strong
+candidate to impact programming practice in the future.
 
 \bibliographystyle{plain}
 \bibliography{references}
