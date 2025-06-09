@@ -554,7 +554,7 @@ of implementing interface checks in Section~\ref{SMT-solvers-for-interface-check
 \section{Unification}
 \label{unification}
 
-In this section we look now at another example where we can put the set theory
+In this section we look now at another example where we can put the theories
 of SMT solvers to work for us. This is conditional unification of a form of
 hereditary Harrop formulas. The source code of this section can be found in
 \sourcefile{Unif2.hs}.
@@ -593,7 +593,7 @@ equality, conjunction, existential and universal quantification, and it also
 has a form of implication that only allows for equalities in the antecedent.
 The conception is driven by the simplest language that still would allow to
 express something of practical interest like constraints of generalized
-algebraic data types.
+algebraic data types (GADTs)~\cite{schrijvers09}.
 
 Our unification algorithm is then expressed in Figure~\ref{conditional-unification}.
 When unification fails, we return an incomplete list of solutions, that is one that
