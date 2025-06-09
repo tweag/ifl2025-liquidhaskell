@@ -992,7 +992,7 @@ require breakthroughs in computing to address them.
 \section{Evaluation of SMT solvers for interface checks}
 \label{SMT-solvers-for-interface-checks}
 
-As the case studies in this paper show, SMT solvers can go a long way in
+As the case studies in this paper reinforce, SMT solvers can go a long way in
 automating static checks. Insight from the user is necessary, however,
 when the properties to check are not handled by any of the theories in the
 solver.
@@ -1019,28 +1019,27 @@ that is meant to address the problem for lemmas about equalities.
 
 It would be possible to ask the SMT solver to instantiate the lemma parameters
 as needed by introducing assertions with universal quantification. For instance,
-assume that \tc{lemma\-FreeVars\-Subst\-Union\-Goal} stands for the returned
-refinement type of lemma \tc{lemma\-FreeVars\-Subst\-Union}.
+the universally quantified lemma \tc{lemma\-FreeVars\-Subst\-Union} follows.
 
 \begin{verbatim}
 (assert
   (forall
     ((s (Subst Term))
-     (t Term))
-    (lemmaFreeVarsSubstUnionGoal s t)))
+     (s1 (Set Int))
+     (s2 (Set Int)))
+    (freeVarsSubst (union s1 s2) s
+       == union (freeVarsSubst s1 s) (freeVarsSubst s2 s))))
 \end{verbatim}
 
 When checking satisfiability of other assertions, the SMT solver
 will try to use the universally quantified assertion. Unfortunately, the
 behavior of the procedures to find instantiations for quantified variables are
-not easy to predict, and require configuring the solver with fuel parameters to
-limit how much effort is devoted to the task. This is why Liquid Haskell refrains
-from doing it~\cite{vazou13}.
+not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
 
 On the performance front, all of the SMTLIB queries in the unification example run
 in 2 seconds, 0.5 seconds for \tc{Subst3.hs}, and 0.03 seconds in \tc{Subst4.hs}.
-That is sometimes faster than it takes to compile the modules with the GHC compiler,
-except in the case of unification. Where things get slower is when measuring Liquid
+That is sometimes faster than it takes to compile the modules with the GHC compiler.
+Where things get slower is when measuring Liquid
 Haskell, which spends several seconds checking the examples and interacting with the
 SMT solver (8 seconds checking unification, 2.5 seconds checking \tc{Subst3.hs},
 2 seconds checking \tc{Subst4.hs}). The authors deem that performance of Liquid Haskell
@@ -1098,8 +1097,8 @@ there is always the question of whether a goal is provable or not in the
 theories at hand. Is there some additional lemma that is necessary about the user defined
 functions? The user has to figure it out on her own. How are the assumptions
 insufficient to prove the goal? The user has to compute it on her own too,
-although it is plausible that counterexamples can be proposed by the
-tooling when the integration matures.
+although it is plausible that counterexamples or better location information~\cite{webbers24}
+can be proposed by the tooling when the integration matures.
 
 As an example, let us consider the lemma \tc{lemma\-FreeVars\-Subst\-Union} discussed in
 Section~\ref{ensuring-the-scope-set-is-checked}.

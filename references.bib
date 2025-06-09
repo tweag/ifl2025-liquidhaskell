@@ -356,3 +356,22 @@ keywords = {code generation, haskell, higher-order logic, isabelle, theorem prov
 location = {Madrid, Spain},
 series = {PEPM '10}
 }
+
+@article{webbers24,
+author = {Webbers, Robin and von Gleissenthall, Klaus and Jhala, Ranjit},
+title = {Refinement Type Refutations},
+year = {2024},
+issue_date = {October 2024},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {8},
+number = {OOPSLA2},
+url = {https://doi.org/10.1145/3689745},
+doi = {10.1145/3689745},
+abstract = {Refinement types combine SMT decidable constraints with a compositional, syntax-directed type system to provide a convenient way to statically and automatically check properties of programs. However, when type checking fails, programmers must use cryptic error messages that, at best, point out the code location where a subtyping constraint failed to determine the root cause of the failure. In this paper, we introduce refinement type refutations, a new approach to explaining why refinement type checking fails, which mirrors the compositional way in which refinement type checking is carried out. First, we show how to systematically transform standard bidirectional type checking rules to obtain refutations. Second, we extend the approach to account for global constraint-based refinement inference via the notion of a must-instantiation: a set of concrete inhabitants of the types of subterms that suffice to demonstrate why typing fails. Third, we implement our method in HayStack—an extension to LiqidHaskell which automatically finds type-refutations when refinement type checking fails, and helps users understand refutations via an interactive user-interface. Finally, we present an empirical evaluation of HayStack using the regression benchmark-set of LiqidHaskell, and the benchmark set of G2, a previous method that searches for (non-compositional) counterexample traces by symbolically executing Haskell source. We show that HayStack can find refutations for 99.7\% of benchmarks, including those with complex typing constructs (e.g., abstract and bounded refinements, and reflection), and does so, an order of magnitude faster than G2.},
+journal = {Proc. ACM Program. Lang.},
+month = oct,
+articleno = {305},
+numpages = {26},
+keywords = {Counterexamples, Refinement Types, Type Refutations}
+}
