@@ -68,8 +68,7 @@
 Application Programming Interfaces (APIs) in programming languages are
 typically described with the types of their operations alongside
 supplementary documentation.
-
-In strongly typed languages, the author of an interface can aim to enrich the
+In a strongly typed language, the author of an interface can aim to enrich the
 types to represent most of the constraints and relationships between the
 operations, or she could decide to keep the types as simple as possible.
 
@@ -77,37 +76,38 @@ Rich types enable the type checker to detect interface misuse,
 thus preventing execution failures or
 incorrect results. However, this richness often increases interface complexity,
 potentially making it cumbersome to use. Developers must therefore strike a
-balancing.
+balance.
 
 The options are not just to lean or not to lean on the type checker, though. In
 this paper we analyze a couple of use cases in the Haskell programming language
 from the perspective of a third alternative. We implement the static checks of
 the interfaces with automated theorem provers, more specifically, SMT solvers.
 And we connect SMT solvers with Haskell by using refinement types as implemented
-in the Liquid Haskell verification tool.
+in the Liquid Haskell verification tool~\cite{vazou14b}.
 
-While SMT solvers have been intended to support programming since long, it has
+While SMT solvers have always been intended to support programming~\cite{barnett05, demoura08}, it has
 been less discussed how their integration through refinement types influences
 interface design. Therefore, our first contribution is a study of
 capture-avoiding substitution with safety checks implemented with Liquid Haskell,
-where we compare with an earlier attempt based on the Haskell type checker and known as
-\textit{the foil}~\cite{maclaurin2022foil}
+where we compare with an earlier attempt based on the Haskell type checker, dubbed
+\textit{the foil}~\cite{maclaurin23}
 (Section~\ref{capture-avoiding-substitution}). Later on, we implement safety checks
 in an implementation of unification (Section~\ref{unification}), a more demanding
 example where extending earlier approaches would be some challenge. Our
 attempt with unification is only partially successful since we had to
-modify the Liquid Haskell implementation to support it. This modifications
+modify the Liquid Haskell implementation to support it. These modifications
 constitute our third contribution, and demonstrate the technical feasibility
 of the approach. Lastly, we offer a discussion
 of the limitations of both the Liquid Haskell implementation (Section~\ref{limitations-of-liquid-haskell}) and the
 general approach of integrating SMT solvers via refinement
-types (Section~\ref{SMT-solvers-interface-checks}).
+types (Section~\ref{SMT-solvers-for-interface-checks}).
 
 Over the years SMT solvers have been used effectively to statically check pointer
-arithmetic, memory safety, side-channel safety in cryptographic algorithms,
-safe parsing of binary input, data structure invariants, data access policies in web applications,
-commutativity of operations on replicated data types, and causal ordering in
-broadcast protocols. There is no question of whether SMT solvers are
+arithmetic, data structure invariants~\cite{vazou14}, memory safety, side-channel
+safety in cryptographic algorithms~\cite{zinzin17},
+safe parsing of binary input~\cite{swamy22}, data access policies in web applications~\cite{lehmann21},
+commutativity of operations on replicated data types~\cite{liu20}, and causal ordering in
+broadcast protocols~\cite{redmond23}. There is no question of whether SMT solvers are
 helpful but whether they can be integrated conveniently in everyday
 programming, or more specifically in this article, in offloading safety static
 checks from the type checker.
@@ -127,8 +127,8 @@ as in $(\lambda z. y)[y:=z]$, we obtain $\lambda z. z$, the identity function!
 This change of meaning is often unwanted and is caused by the binder capturing
 free variables in $t$.
 
-Several approaches exist to avoid name captures efficiently. One of them,
-called \textit{the rapier}, is used in the GHC compiler. The rapier requires the
+The GHC Haskell compiler uses an approach to avoid name capture called
+\textit{the rapier}~\cite{peytonjones02secrets}. It requires the
 implementation of substitutions to carry an additional \textit{scope} set containing all the
 variables that appear free in the result of the substitution. This set is
 used both to decide what to rename a binder to, in order to avoid name capture,
@@ -162,7 +162,7 @@ freshVar s = case lookupMax s of Nothing -> 0; Just i -> i + 1
 \subsection{The rapier with stronger types}
 \label{the-rapier-with-stronger-types}
 
-MacLaurin et al. go over the merits and difficulties of the rapier. In
+Maclaurin et al.~\cite{maclaurin23} go over the merits and difficulties of the rapier. In
 particular, a few requirements need to be respected when implementing it, or
 software faults ensue. Here is a recollection of the requirements in question:
 \begin{enumerate}
@@ -196,9 +196,9 @@ software faults ensue. Here is a recollection of the requirements in question:
       map the variable of the binder to itself.
 \end{enumerate}
 
-In an approach dubbed \textit{The foil}, MacLaurin et al. propose to use the type
-checker to ensure most of these
-requirements, thus reducing the chance of programmer mistakes. They
+Maclaurin et al. propose to use the type checker to ensure most of these
+requirements, thus reducing the chance of programmer mistakes, in an approach they
+name \text{the foil}. They
 propose a library with types \tc{Scope n}, \tc{Name n}, and
 \tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
 the type index \tc{n} identifies the set. A value of type \tc{Name n} is a name that
@@ -376,7 +376,7 @@ of the function \tc{lookupSubst}, it will assume that the key is in the domain
 of the substitution if the lookup succeeds.
 
 Our refinement type signature of \tc{substitute} follows the type signature of
-MacLaurin et al. to the letter. With these annotations, Liquid Haskell can ensure that the
+Maclaurin et al. to the letter. With these annotations, Liquid Haskell can ensure that the
 implementation of substitution in Figure~\ref{rapier-style-substitution} meets
 all of the requirements in Section~\ref{the-rapier-with-stronger-types}, except
 for the first requirement, which we discuss further in the next subsection.
@@ -983,9 +983,8 @@ In our code we have been using the simplest possible style of programming.
 There are no GADTs, no type families, not even type classes, though
 Liquid Haskell has some support for type classes~\cite{liu20}. At the moment,
 pushing for more demanding programming patterns is likely to surface more
-inconveniences for those aiming to use the tool for a particular goal.
-Aiming for the simplest style is, therefore, a constraint of the current
-implementation, unless one is willing to contribute fixes. On the bright
+inconveniences. Aiming for the simplest style is, therefore, a constraint of
+the current implementation, unless one is willing to contribute fixes. On the bright
 side, none of the difficulties that we have encountered so far are likely to
 require breakthroughs in computing to address them.
 
@@ -1036,7 +1035,7 @@ will try to use the universally quantified assertion. Unfortunately, the
 behavior of the procedures to find instantiations for quantified variables are
 not easy to predict, and require configuring the solver with fuel parameters to
 limit how much effort is devoted to the task. This is why Liquid Haskell refrains
-from doing it.
+from doing it~\cite{vazou13}.
 
 On the performance front, all of the SMTLIB queries in the unification example run
 in 2 seconds, 0.5 seconds for \tc{Subst3.hs}, and 0.03 seconds in \tc{Subst4.hs}.
@@ -1051,7 +1050,7 @@ Other than using an SMT solver in the fashion of Liquid Haskell, F*, Why3 or Daf
 the alternatives to implementing interface checks are either to encode the checks in
 the type-checker, or to migrate to a dependently typed language and then hope to
 translate back the checked programs to the original language. Of these alternatives,
-we feel like using the type-checker is among the most pragmatic. MacLaurin et al. make
+we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
 a fine demonstration about the foil.
 
 Perhaps one of the biggest compromises when encoding properties in the type-checker
@@ -1165,8 +1164,6 @@ freeVarsSubst (union s1 s2) s ==
 It is an open question whether we can hope the tooling to effectively
 assist these calculations one day.
 
-TODO: search for similar discussion about the convenience of refinement types in the literature
-
 
 \section{Conclusions}
 \label{conclusions}
@@ -1186,8 +1183,8 @@ However, integrating SMT solvers for static checks still presents some
 challenges. One of them is maturing the existing integrations until they are
 feasible to use in industrial setting. Another one is deriving useful
 corrective actions from the error messages. And a last challenge is lowering
-the checking overhead until it is close to the time required for SMT queries
-alone.
+the checking overhead until it is close to the time required for queries to
+the SMT solver alone.
 
 The generality of the approach, and the simplicity with which it enables
 composition of different static checks, are unique features that make it a strong

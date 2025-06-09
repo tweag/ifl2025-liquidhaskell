@@ -1,11 +1,3 @@
-@inproceedings{maclaurin2022foil,
-  title={The foil: capture-avoiding substitution with no sharp edges},
-  author={Maclaurin, Dougal and Radul, Alexey and Paszke, Adam},
-  booktitle={Proceedings of the 34th Symposium on Implementation and Application of Functional Languages},
-  pages={1--10},
-  year={2022}
-}
-
 @TECHREPORT{BarFT-RR-25,
   author =	 {Clark Barrett and Pascal Fontaine and Cesare Tinelli},
   title =	 {{The SMT-LIB Standard: Version 2.7}},
@@ -49,4 +41,186 @@ keywords = {typeclasses, replicated data types, refinement types, Liquid Haskell
   URN =		{urn:nbn:de:0030-drops-162105},
   doi =		{10.4230/DARTS.8.2.12},
   annote =	{Keywords: term rewriting, program verification, theorem proving}
+}
+
+@article{vazou14,
+author = {Vazou, Niki and Seidel, Eric L. and Jhala, Ranjit},
+title = {LiquidHaskell: experience with refinement types in the real world},
+year = {2014},
+issue_date = {December 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {49},
+number = {12},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2775050.2633366},
+doi = {10.1145/2775050.2633366},
+abstract = {Haskell has many delightful features. Perhaps the one most beloved by its users is its type system that allows developers to specify and verify a variety of program properties at compile time. However, many properties, typically those that depend on relationships between program values are impossible, or at the very least, cumbersome to encode within the existing type system. Many such properties can be verified using a combination of Refinement Types and external SMT solvers. We describe the refinement type checker liquidHaskell, which we have used to specify and verify a variety of properties of over 10,000 lines of Haskell code from various popular libraries, including containers, hscolour, bytestring, text, vector-algorithms and xmonad. First, we present a high-level overview of liquidHaskell, through a tour of its features. Second, we present a qualitative discussion of the kinds of properties that can be checked -- ranging from generic application independent criteria like totality and termination, to application specific concerns like memory safety and data structure correctness invariants. Finally, we present a quantitative evaluation of the approach, with a view towards measuring the efficiency and programmer effort required for verification, and discuss the limitations of the approach.},
+journal = {SIGPLAN Not.},
+month = sep,
+pages = {39–51},
+numpages = {13},
+keywords = {verification, smt-based verification, refinement types, Haskell}
+}
+
+@misc{zinzin17,
+      author = {Jean Karim Zinzindohoué and Karthikeyan Bhargavan and Jonathan Protzenko and Benjamin Beurdouche},
+      title = {{HACL}*: A Verified Modern Cryptographic Library},
+      howpublished = {Cryptology {ePrint} Archive, Paper 2017/536},
+      year = {2017},
+      url = {https://eprint.iacr.org/2017/536}
+}
+
+@inproceedings{swamy22,
+author = {Swamy, Nikhil and Ramananandro, Tahina and Rastogi, Aseem and Spiridonova, Irina and Ni, Haobin and Malloy, Dmitry and Vazquez, Juan and Tang, Michael and Cardona, Omar and Gupta, Arti},
+title = {Hardening attack surfaces with formally proven binary format parsers},
+year = {2022},
+isbn = {9781450392655},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3519939.3523708},
+doi = {10.1145/3519939.3523708},
+abstract = {With an eye toward performance, interoperability, or legacy concerns, low-level system software often must parse binary encoded data formats. Few tools are available for this task, especially since the formats involve a mixture of arithmetic and data dependence, beyond what can be handled by typical parser generators. As such, parsers are written by hand in languages like C, with inevitable errors leading to security vulnerabilities.
+
+Addressing this need, we present EverParse3D, a parser generator for binary message formats that yields performant C code backed by fully automated formal proofs of memory safety, arithmetic safety, functional correctness, and even double-fetch freedom to prevent certain kinds of time-of-check/time-of-use errors. This allows systems developers to specify their message formats declaratively and to integrate correct-by-construction C code into their applications, eliminating several classes of bugs.
+
+EverParse3D has been in use in the Windows kernel for the past year. Applied primarily to the Hyper-V network virtualization stack, the formats of nearly 100 different messages spanning four protocols have been specified in EverParse3D and the resulting formally proven parsers have replaced prior handwritten code. We report on our experience in detail.},
+booktitle = {Proceedings of the 43rd ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+pages = {31–45},
+numpages = {15},
+keywords = {Formal proofs, Network formats, Parser generators},
+location = {San Diego, CA, USA},
+series = {PLDI 2022}
+}
+
+@inproceedings {lehmann21,
+author = {Nico Lehmann and Rose Kunkel and Jordan Brown and Jean Yang and Niki Vazou and Nadia Polikarpova and Deian Stefan and Ranjit Jhala},
+title = {{STORM}: Refinement Types for Secure Web Applications},
+booktitle = {15th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 21)},
+year = {2021},
+isbn = {978-1-939133-22-9},
+pages = {441--459},
+url = {https://www.usenix.org/conference/osdi21/presentation/lehmann},
+publisher = {{USENIX} Association},
+month = jul
+}
+
+@inproceedings{redmond23,
+author = {Redmond, Patrick and Shen, Gan and Vazou, Niki and Kuper, Lindsey},
+title = {Verified Causal Broadcast with Liquid Haskell},
+year = {2023},
+isbn = {9781450398312},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3587216.3587222},
+doi = {10.1145/3587216.3587222},
+abstract = {Protocols to ensure that messages are delivered in causal order are a ubiquitous building block of distributed systems. For instance, distributed data storage systems can use causally ordered message delivery to ensure causal consistency, and CRDTs can rely on the existence of an underlying causally-ordered messaging layer to simplify their implementation. A causal delivery protocol ensures that when a message is delivered to a process, any causally preceding messages sent to the same process have already been delivered to it. While causal delivery protocols are widely used, verification of their correctness is less common, much less machine-checked proofs about executable implementations. We implemented a standard causal broadcast protocol in Haskell and used the Liquid Haskell solver-aided verification system to express and mechanically prove that messages will never be delivered to a process in an order that violates causality. We express this property using refinement types and prove that it holds of our implementation, taking advantage of Liquid Haskell’s underlying SMT solver to automate parts of the proof and using its manual theorem-proving features for the rest. We then put our verified causal broadcast implementation to work as the foundation of a distributed key-value store.},
+booktitle = {Proceedings of the 34th Symposium on Implementation and Application of Functional Languages},
+articleno = {6},
+numpages = {13},
+location = {Copenhagen, Denmark},
+series = {IFL '22}
+}
+
+@InProceedings{demoura08,
+author="de Moura, Leonardo
+and Bj{\o}rner, Nikolaj",
+editor="Ramakrishnan, C. R.
+and Rehof, Jakob",
+title="Z3: An Efficient SMT Solver",
+booktitle="Tools and Algorithms for the Construction and Analysis of Systems",
+year="2008",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="337--340",
+abstract="Satisfiability Modulo Theories (SMT) problem is a decision problem for logical first order formulas with respect to combinations of background theories such as: arithmetic, bit-vectors, arrays, and uninterpreted functions. Z3 is a new and efficient SMT Solver freely available from Microsoft Research. It is used in various software verification and analysis applications.",
+isbn="978-3-540-78800-3"
+}
+
+@article{vazou14b,
+author = {Vazou, Niki and Seidel, Eric L. and Jhala, Ranjit and Vytiniotis, Dimitrios and Peyton-Jones, Simon},
+title = {Refinement types for Haskell},
+year = {2014},
+issue_date = {September 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {49},
+number = {9},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2692915.2628161},
+doi = {10.1145/2692915.2628161},
+abstract = {SMT-based checking of refinement types for call-by-value languages is a well-studied subject. Unfortunately, the classical translation of refinement types to verification conditions is unsound under lazy evaluation. When checking an expression, such systems implicitly assume that all the free variables in the expression are bound to values. This property is trivially guaranteed by eager, but does not hold under lazy, evaluation. Thus, to be sound and precise, a refinement type system for Haskell and the corresponding verification conditions must take into account which subset of binders actually reduces to values. We present a stratified type system that labels binders as potentially diverging or not, and that (circularly) uses refinement types to verify the labeling. We have implemented our system in LIQUIDHASKELL and present an experimental evaluation of our approach on more than 10,000 lines of widely used Haskell libraries. We show that LIQUIDHASKELL is able to prove 96\% of all recursive functions terminating, while requiring a modest 1.7 lines of termination-annotations per 100 lines of code.},
+journal = {SIGPLAN Not.},
+month = aug,
+pages = {269–282},
+numpages = {14}
+}
+
+@inproceedings{barnett05,
+author = {Barnett, Mike and Chang, Bor-Yuh Evan and DeLine, Robert and Jacobs, Bart and Leino, K. Rustan M.},
+title = {Boogie: a modular reusable verifier for object-oriented programs},
+year = {2005},
+isbn = {3540367497},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/11804192_17},
+doi = {10.1007/11804192_17},
+abstract = {A program verifier is a complex system that uses compiler technology, program semantics, property inference, verification-condition generation, automatic decision procedures, and a user interface. This paper describes the architecture of a state-of-the-art program verifier for object-oriented programs.},
+booktitle = {Proceedings of the 4th International Conference on Formal Methods for Components and Objects},
+pages = {364–387},
+numpages = {24},
+location = {Amsterdam, The Netherlands},
+series = {FMCO'05}
+}
+
+@article{peytonjones02secrets,
+author = {Peyton Jones, Simon and Marlow, Simon},
+title = {Secrets of the Glasgow Haskell Compiler inliner},
+year = {2002},
+month = {July},
+abstract = {Higher-order languages, such as Haskell, encourage the programmer to build abstractions by composing functions. A good compiler must inline many of these calls to recover an efficiently executable program.
+
+In principle, inlining is dead simple: just replace the call of a function by an instance of its body. But any compiler-writer will tell you that inlining is a black art, full of delicate compromises that work together to give good performance without unnecessary code bloat.
+
+The purpose of this paper is, therefore, to articulate the key lessons we learned from a full-scale ``production'' inliner, the one used in the Glasgow Haskell compiler. We focus mainly on the algorithmic aspects, but we also provide some indicative measurements to substantiate the importance of various aspects of the inliner.
+
+The "Related File" link above is an earlier tech-report version of the paper, but the JFP version is the one to read (the "View publication" button).},
+url = {https://www.microsoft.com/en-us/research/publication/secrets-of-the-glasgow-haskell-compiler-inliner/},
+pages = {393-434},
+journal = {Journal of Functional Programming},
+volume = {12},
+}
+
+@inproceedings{maclaurin23,
+author = {Maclaurin, Dougal and Radul, Alexey and Paszke, Adam},
+title = {The Foil: Capture-Avoiding Substitution With No Sharp Edges},
+year = {2023},
+isbn = {9781450398312},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3587216.3587224},
+doi = {10.1145/3587216.3587224},
+abstract = {Correctly manipulating program terms in a compiler is surprisingly difficult because of the need to avoid name capture. The rapier from Peyton&nbsp;Jones and Marlow [9] is a cutting-edge technique for fast, stateless capture-avoiding substitution for expressions represented with explicit names. It is, however, a sharp tool—its invariants are tricky and need to be maintained throughout the whole compiler that uses it. We describe the foil, an elaboration of the rapier that uses Haskell’s type system to enforce the rapier’s invariants statically, preventing a class of hard-to-find bugs, but without adding any run-time overheads.},
+booktitle = {Proceedings of the 34th Symposium on Implementation and Application of Functional Languages},
+articleno = {8},
+numpages = {10},
+location = {Copenhagen, Denmark},
+series = {IFL '22}
+}
+
+@inproceedings{vazou13,
+author = {Vazou, Niki and Rondon, Patrick M. and Jhala, Ranjit},
+title = {Abstract refinement types},
+year = {2013},
+isbn = {9783642370359},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/978-3-642-37036-6_13},
+doi = {10.1007/978-3-642-37036-6_13},
+abstract = {We present abstract refinement types which enable quantification over the refinements of data- and function-types. Our key insight is that we can avail of quantification while preserving SMT-based decidability, simply by encoding refinement parameters as uninterpreted propositions within the refinement logic. We illustrate how this mechanism yields a variety of sophisticated means for reasoning about programs, including: parametric refinements for reasoning with type classes, index-dependent refinements for reasoning about key-value maps, recursive refinements for reasoning about recursive data types, and inductive refinements for reasoning about higher-order traversal routines. We have implemented our approach in a refinement type checker for Haskell and present experiments using our tool to verify correctness invariants of various programs.},
+booktitle = {Proceedings of the 22nd European Conference on Programming Languages and Systems},
+pages = {209–228},
+numpages = {20},
+location = {Rome, Italy},
+series = {ESOP'13}
 }
