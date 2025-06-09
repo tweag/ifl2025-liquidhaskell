@@ -244,3 +244,87 @@ pages = {341–352},
 numpages = {12},
 keywords = {GADTs, Haskell, type inference}
 }
+
+@ARTICLE{leino17,
+  author={M. Leino, K. Rustan},
+  journal={IEEE Software},
+  title={Accessible Software Verification with Dafny},
+  year={2017},
+  volume={34},
+  number={6},
+  pages={94-97},
+  keywords={Formal verification;Software reliability;Software development;Encoding;Cognition;software verification;Dafny;IDE;imperative procedures;lemma proofs;software engineering;software development;Reliable Code},
+  doi={10.1109/MS.2017.4121212}
+}
+
+@article{swamy16,
+author = {Swamy, Nikhil and Hri\c{t}cu, C\u{a}t\u{a}lin and Keller, Chantal and Rastogi, Aseem and Delignat-Lavaud, Antoine and Forest, Simon and Bhargavan, Karthikeyan and Fournet, C\'{e}dric and Strub, Pierre-Yves and Kohlweiss, Markulf and Zinzindohoue, Jean-Karim and Zanella-B\'{e}guelin, Santiago},
+title = {Dependent types and multi-monadic effects in F*},
+year = {2016},
+issue_date = {January 2016},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {51},
+number = {1},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2914770.2837655},
+doi = {10.1145/2914770.2837655},
+abstract = {We present a new, completely redesigned, version of F*, a language that works both as a proof assistant as well as a general-purpose, verification-oriented, effectful programming language. In support of these complementary roles, F* is a dependently typed, higher-order, call-by-value language with _primitive_ effects including state, exceptions, divergence and IO. Although primitive, programmers choose the granularity at which to specify effects by equipping each effect with a monadic, predicate transformer semantics. F* uses this to efficiently compute weakest preconditions and discharges the resulting proof obligations using a combination of SMT solving and manual proofs. Isolated from the effects, the core of F* is a language of pure functions used to write specifications and proof terms---its consistency is maintained by a semantic termination check based on a well-founded order. We evaluate our design on more than 55,000 lines of F* we have authored in the last year, focusing on three main case studies. Showcasing its use as a general-purpose programming language, F* is programmed (but not verified) in F*, and bootstraps in both OCaml and F#. Our experience confirms F*'s pay-as-you-go cost model: writing idiomatic ML-like code with no finer specifications imposes no user burden. As a verification-oriented language, our most significant evaluation of F* is in verifying several key modules in an implementation of the TLS-1.2 protocol standard. For the modules we considered, we are able to prove more properties, with fewer annotations using F* than in a prior verified implementation of TLS-1.2. Finally, as a proof assistant, we discuss our use of F* in mechanizing the metatheory of a range of lambda calculi, starting from the simply typed lambda calculus to System F-omega and even micro-F*, a sizeable fragment of F* itself---these proofs make essential use of F*'s flexible combination of SMT automation and constructive proofs, enabling a tactic-free style of programming and proving at a relatively large scale.},
+journal = {SIGPLAN Not.},
+month = jan,
+pages = {256–270},
+numpages = {15},
+keywords = {verification, proof assistants, effectful programming}
+}
+
+@InProceedings{filli13,
+author="Filli{\^a}tre, Jean-Christophe
+and Paskevich, Andrei",
+editor="Felleisen, Matthias
+and Gardner, Philippa",
+title="Why3 --- Where Programs Meet Provers",
+booktitle="Programming Languages and Systems",
+year="2013",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="125--128",
+abstract="We present Why3, a tool for deductive program verification, and WhyML, its programming and specification language. WhyML is a first-order language with polymorphic types, pattern matching, and inductive predicates. Programs can make use of record types with mutable fields, type invariants, and ghost code. Verification conditions are discharged by Why3 with the help of various existing automated and interactive theorem provers. To keep verification conditions tractable and comprehensible, WhyML imposes a static control of aliases that obviates the use of a memory model. A user can write WhyML programs directly and get correct-by-construction OCaml programs via an automated extraction mechanism. WhyML is also used as an intermediate language for the verification of C, Java, or Ada programs. We demonstrate the benefits of Why3 and WhyML on non-trivial examples of program verification.",
+isbn="978-3-642-37036-6"
+}
+
+@article{breitner18,
+author = {Breitner, Joachim and Spector-Zabusky, Antal and Li, Yao and Rizkallah, Christine and Wiegley, John and Weirich, Stephanie},
+title = {Ready, set, verify! applying hs-to-coq to real-world Haskell code (experience report)},
+year = {2018},
+issue_date = {September 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {2},
+number = {ICFP},
+url = {https://doi.org/10.1145/3236784},
+doi = {10.1145/3236784},
+abstract = {Good tools can bring mechanical verification to programs written in mainstream functional languages. We use <pre>hs-to-coq</pre> to translate significant portions of Haskell’s <pre>containers</pre> library into Coq, and verify it against specifications that we derive from a variety of sources including type class laws, the library’s test suite, and interfaces from Coq’s standard library. Our work shows that it is feasible to verify mature, widely-used, highly optimized, and unmodified Haskell code. We also learn more about the theory of weight-balanced trees, extend <pre>hs-to-coq</pre> to handle partiality, and – since we found no bugs – attest to the superb quality of well-tested functional code.},
+journal = {Proc. ACM Program. Lang.},
+month = jul,
+articleno = {89},
+numpages = {16},
+keywords = {Coq, Haskell, verification}
+}
+
+@InProceedings{bove09,
+author="Bove, Ana
+and Dybjer, Peter
+and Norell, Ulf",
+editor="Berghofer, Stefan
+and Nipkow, Tobias
+and Urban, Christian
+and Wenzel, Makarius",
+title="A Brief Overview of Agda -- A Functional Language with Dependent Types",
+booktitle="Theorem Proving in Higher Order Logics",
+year="2009",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="73--78",
+abstract="We give an overview of Agda, the latest in a series of dependently typed programming languages developed in Gothenburg. Agda is based on Martin-L{\"o}f's intuitionistic type theory but extends it with numerous programming language features. It supports a wide range of inductive data types, including inductive families and inductive-recursive types, with associated flexible pattern-matching. Unlike other proof assistants, Agda is not tactic-based. Instead it has an Emacs-based interface which allows programming by gradual refinement of incomplete type-correct terms.",
+isbn="978-3-642-03359-9"
+}

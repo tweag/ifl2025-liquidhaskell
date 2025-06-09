@@ -106,8 +106,8 @@ Over the years SMT solvers have been used effectively to statically check pointe
 arithmetic, data structure invariants~\cite{vazou14}, memory safety, side-channel
 safety in cryptographic algorithms~\cite{zinzin17},
 safe parsing of binary input~\cite{swamy22}, data access policies in web applications~\cite{lehmann21},
-commutativity of operations on replicated data types~\cite{liu20}, and causal ordering in
-broadcast protocols~\cite{redmond23}. There is no question of whether SMT solvers are
+commutativity of operations on replicated data types~\cite{liu20}, causal ordering in
+broadcast protocols~\cite{redmond23}, and more. There is no question of whether SMT solvers are
 helpful but whether they can be integrated conveniently in everyday
 programming, or more specifically in this article, in offloading safety static
 checks from the type checker.
@@ -1046,10 +1046,11 @@ SMT solver (8 seconds checking unification, 2.5 seconds checking \tc{Subst3.hs},
 2 seconds checking \tc{Subst4.hs}). The authors deem that performance of Liquid Haskell
 can be improved but likely not below what the SMT solver can deliver.
 
-Other than using an SMT solver in the fashion of Liquid Haskell, F*, Why3 or Dafny,
+Other than using an SMT solver in the fashion of Liquid Haskell, F*~\cite{swamy16},
+Why3~\cite{filli13}, or Dafny~\cite{leino17},
 the alternatives to implementing interface checks are either to encode the checks in
-the type-checker, or to migrate to a dependently typed language and then hope to
-translate back the checked programs to the original language. Of these alternatives,
+the type-checker, or to migrate to a dependently typed language for the sake of
+static checking~\cite{bove09, breitner18}. Of these alternatives,
 we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
 a fine demonstration about the foil.
 
