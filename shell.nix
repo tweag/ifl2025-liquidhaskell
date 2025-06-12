@@ -58,7 +58,11 @@ pkgs.mkShell {
           url
           xcolor
           xkeyval
-          xstring;
+          xstring
+          # todo deps
+          xargs
+          todonotes;
+
       })
   ];
 }

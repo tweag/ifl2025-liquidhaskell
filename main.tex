@@ -2,6 +2,42 @@
 \usepackage[utf8]{inputenc}
 \usepackage{fancyvrb}
 
+%%%%%%%%%%%%%%%%% Editing marks %%%%%%%%%%%%%%%%%
+
+  % TOGGLE ME to turn off all the commentary:
+  \InputIfFileExists{no-editing-marks}{
+    \def\noeditingmarks{}
+  }
+
+  \usepackage{xargs}
+  \usepackage[colorinlistoftodos,prependcaption,textsize=tiny]{todonotes}
+  % ^^ Need for pgfsyspdfmark apparently?
+  \ifx\noeditingmarks\undefined
+      % Adapting to acmart's small margins
+      \setlength{\marginparsep}{0.3em}
+      \setlength{\marginparwidth}{1.4cm}
+
+      \newcommandx{\unsure}[2][1=]{\todo[linecolor=orange,backgroundcolor=orange!25,bordercolor=orange,#1]{#2}}
+      \newcommandx{\info}[2][1=]{\todo[linecolor=green,backgroundcolor=green!25,bordercolor=green,#1]{#2}}
+      \newcommandx{\change}[2][1=]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{#2}}
+      \newcommandx{\inconsistent}[2][1=]{\todo[linecolor=red,backgroundcolor=red!25,bordercolor=red,#1]{#2}}
+      \newcommandx{\critical}[2][1=]{\todo[linecolor=purple,backgroundcolor=purple!25,bordercolor=purple,#1]{#2}}
+      \newcommand{\improvement}[1]{\todo[linecolor=pink,backgroundcolor=pink!25,bordercolor=pink]{#1}}
+      \newcommandx{\resolved}[2][1=]{\todo[linecolor=OliveGreen,backgroundcolor=OliveGreen!25,bordercolor=OliveGreen,#1]{#2}} % use this to mark a resolved question
+    \else
+      \renewcommand{\todo}{}
+      \newcommandx{\unsure}[2][1=]{{}}
+      \newcommandx{\info}[2][1=]{{}}
+      \newcommandx{\change}[2][1=]{{}}
+      \newcommandx{\inconsistent}[2][1=]{{}}
+      \newcommandx{\critical}[2]{{}}
+      \newcommand{\improvement}[1]{{}}
+      \newcommandx{\resolved}[2][1=]{{}}
+
+  \fi
+
+%%%%%%%%%%%%%%%%% /Editing marks %%%%%%%%%%%%%%%%%
+
 \title{Interface design with SMT solvers: A study}
 
 \author{undisclosed author/s}
