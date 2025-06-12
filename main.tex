@@ -617,31 +617,30 @@ We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-c
 \section{Unification}
 \label{unification}
 
-Now that we've established the refined rapier interface, let us now show how it
+Now that we have established the refined rapier interface, let us now show how it
 can be applied to a more realistic example: solving first-order equational
 formulas. Specifically, we'll be solving a form of hereditary Harrop formulas in
 the Herbrand domain. This is the sort of unification problem which can show up
 when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
 and, in the authors' experience, something where any help from the compiler is welcome.
-The source code of this section can be found in
-\sourcefile{Unif2.hs}.\change{Please make it just Unif}
+The source code of this section can be found in \sourcefile{Unif.hs}.
 
-In addition to variables, still represented as integers, and we have unification
-variables. Unification variables their own scope: the formula
-$\exists x. \forall y. x=y$ doesn't have a solutions. It will be reduced to a
+In addition to variables, still represented as integers, we have unification
+variables. Unification variables have their own scope: the formula
+$\exists x. \forall y. x=y$ doesn't have a solution. It will be reduced to a
 formula of the form $f_{x} = y$ where $f_{x}$ is a unification variable; we very much
 don't want this unification problem to succeed\improvement{I think we should
   use a better notation to distinguish unification variables from rigid
   variables.}: we shall make it so that $y$ isn't in the permissible scope for $f_{x}$.
 
-Furthermore we will perform substitutions, substitutions are blocked by
+Furthermore, we will perform substitutions, substitutions are blocked by
 unification variables as we don't know what they stand for yet. So a unification
-variable, in our syntax, is an pair $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ of a
+variable, in our syntax, is a pair $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ of a
 unification variable proper and a suspended substitution. Where
 $\{x_0,\ldots,x_{n}\}$ is the scope of $f$. Such a pair is akin to a skolem
 function application $f(t_0,\ldots,t_n)$. Notice in particular, how the solution
-$f$ can only have free variables in $\{x_0,\ldots,x_{n}\}$, but
+of $f$ can only have free variables in $\{x_0,\ldots,x_{n}\}$, but
 $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ may live in a different scope altogether. This
 is what makes this type of unification problem tricky.
 
@@ -650,7 +649,7 @@ type Var = Int
 type SkolemApp = (Var, Subst Term)
 \end{verbatim}
 
-This way, or formula $\exists x. \forall y. x=y$ will be reduced to
+This way, our formula $\exists x. \forall y. x=y$ will be reduced to
 $(f_{x},[]) = y$ which doesn't have a solution. On the other hand
 $\forall x. \exists y. x = y$ becomes $x = (f_{y}, [x:=x])$ so $x$ is a solution
 for $f_{y}$ and the formula is solvable.
