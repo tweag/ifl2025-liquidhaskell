@@ -2,6 +2,7 @@
 OUTPUT_DIR=$(shell pwd)/dist
 
 LATEX=latexmk -xelatex -shell-escape -output-directory=$(OUTPUT_DIR)
+LATEX_SRC=main.tex references.bib
 
 all: main
 
@@ -9,5 +10,8 @@ all: main
 clean:
 	rm -rf $(OUTPUT_DIR)/*
 
-main : main.tex references.bib
+main : $(LATEX_SRC)
 	$(LATEX) main.tex
+
+continuous::
+	ls $(LATEX_SRC) Makefile | entr make -j

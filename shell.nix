@@ -4,6 +4,7 @@ pkgs.mkShell {
   name = "texlive-env";
 
   buildInputs = with pkgs; [
+    entr
     (texlive.combine
       { inherit (texlive)
           acmart
