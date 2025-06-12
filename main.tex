@@ -326,15 +326,16 @@ signature checking and a classical type checker:
 
 \begin{itemize}
   \item The checking process consists in generating logical assumptions which
-        are then fed to an SMT solver, leveraging the powerful reasoning
-        capabilities of SMT solvers to reason about numbers, sets, etc…
-  \item Signature are expressed with \emph{refinement types} of the form {\small
-        \verb+{ x:b | p }+}, which denotes values of type
-        base type {\small\verb+b+} that satisfy predicate {\small\verb+p+}. Refinement are subject to subtyping in
-        the same way as subsets in set theory, so that we have\unsure{Check if
-        my example actually works}
+        are then fed to an SMT solver, leveraging the powerful
+        capabilities of SMT solvers to reason about numbers, arrays, strings, etc…
+  \item Signatures are expressed with \emph{refinement types} of the form
+        \tc{\{x:b | p\}}, which denotes values of type
+        base type \tc{b} that satisfy predicate \tc{p}.
+        Refinements are subject to subtyping in the same way as subsets in set
+        theory, so that we have
 \begin{verbatim}
-{-@ f :: { x:Int | x `mod` 2 == 0 } -> { x:Int | x `mod` 4 == 0 } @-}
+{-@ f :: {x:Int | x > 1} -> {x:Int | x > 0} @-}
+f :: Int -> Int
 f x = x
 \end{verbatim}
 \end{itemize}
