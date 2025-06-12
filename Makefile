@@ -1,7 +1,7 @@
 ## The output directory
 OUTPUT_DIR=$(shell pwd)/dist
 
-LATEX=latexmk -xelatex -shell-escape -output-directory=$(OUTPUT_DIR)
+LATEX=latexmk -xelatex -shell-escape -output-directory=$(OUTPUT_DIR) -halt-on-error -interaction=nonstopmode
 LATEX_SRC=main.tex references.bib
 
 all: main
