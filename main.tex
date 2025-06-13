@@ -162,14 +162,17 @@ The poster child is substitution like in
 $(\lambda x. y)[y:=t]$. The result of this substitution is $\lambda x. t$.
 Thus $(\lambda x. y)[y:=x]$ is $\lambda x. x$. An easy mistake!
 
-The GHC Haskell compiler uses an approach to avoid name capture called
+Compiler authors have proposed many discipline to help make scope more
+manageable.
+The GHC Haskell compiler, for instance, uses an approach to avoid name capture called
 \textit{the rapier}~\cite{peytonjones02secrets}. All term-manipulating functions
 carry an additional \textit{scope} set containing all the
 variables that appear free in its arguments. This set is
 used both to decide what to rename a binder to, in order to avoid name capture,
 and it is also used to skip renaming a binder if it wouldn't capture any free
-variables. Figure~\ref{rapier-style-substitution} shows an implementation of the
-technique on the untyped lambda calculus.
+variables. Figure~\ref{rapier-style-substitution} shows an implementation of
+substitution
+for the untyped lambda calculus.
 
 \begin{figure}
 \begin{verbatim}
@@ -197,52 +200,41 @@ freshVar s = case lookupMax s of Nothing -> 0; Just i -> i + 1
 \subsection{The foil}
 \label{the-rapier-with-stronger-types}
 
-Maclaurin et al.~\cite{maclaurin23} go over the merits and difficulties of the rapier. In
-particular, a few requirements need to be respected when implementing it, or
-software faults ensue. Here is a recollection of the requirements in
-question:\critical{I[Arnaud] can't find any of this in the Foil article. What
-  does it refer to?}
+The rapier wasn't enough, however, for \citet{maclaurin23} who report that
+despite using the rapier they struggled with frequent scope issues in their
+compiler. They set out to, enforce the scope properties of the rapier with
+Haskell's type system. A stunt that has often been attempted, but
+\cite{maclaurin23}'s approach, that they name \emph{the foil}, is probably the
+first to succeed at enforcing such invariants without incurring an unreasonable
+amount of boilerplate.
+
+Here is our distillation of the properties that \citeauthor{maclaurin23} set
+out to guarantee (see also \cite[Section~4]{maclaurin23}):
 \begin{enumerate}
-\item Membership to the scope set needs to be tested for every binder encountered
-      during the substitution traversal, and the binders need to be renamed if
-      they are in the set.
-\item The scope set needs to be constructed correctly before starting a substitution.
-      It should contain all of the variables in the result of the substitution,
-      and it can also be a superset of those. Since we don't have the result of
-      the substitution yet, we turn to specify it in terms of the inputs as well.
-      \begin{enumerate}
-      \item The scope set needs to include all the variables free in the input
-            lambda expression. Otherwise, renaming a variable could accidentally
-            capture a free variable. The only exception to this rule are the
-            variables that also happen to be in the domain of the substitution
-            (binders that capture them don't need to be renamed since the substitution
-            will replace occurrences of those free variables).
-      \item The scope set needs to include all the variables free in the range
-            of the substitution.
-      \end{enumerate}
-\item Binders need to be added to the scope set whenever they are encountered,
-      so further attempts to rename other binders don't capture them.
-\item When renaming a binder, the new name must be guaranteed to not belong to
-      the scope set.
-\item When renaming a binder, the occurrences of the old bound variable need to be
-      substituted with the new name.
-\item The binders need to be removed from the domain of the substitution when
-      they are not in the scope set, otherwise the substitution will happily
-      replace occurrences of those bound variables! An alternative we use in
-      Figure~\ref{rapier-style-substitution} is to redefine the substitution to
-      map the variable of the binder to itself.
+\item Every traversed binder must be added to the scope set, lest their name
+      is later used instead of a fresh name.
+\item Every traversed binder must be renamed if it's already a member of the
+      scope set.\unsure{Is this true? What happens if you don't rename and
+      simply shadow?}
+\item When renaming a binder, the new name must not belong to the scope set.
+\item When renaming a binder, the occurrences of the old bound variable need
+      to be substituted with the new name.
+\item The initial scope set must contain the free variable of all the relevant
+      arguments.
+% \item The binders need to be removed from the domain of the substitution when
+%       they are not in the scope set, otherwise the substitution will happily
+%       replace occurrences of those bound variables! An alternative we use in
+%       Figure~\ref{rapier-style-substitution} is to redefine the substitution to
+%       map the variable of the binder to itself.
 \end{enumerate}
 
-Maclaurin et al. propose to use the type checker to ensure most of these
-requirements, thus reducing the chance of programmer mistakes, in an approach they
-name \text{the foil}. They
-propose a library with types \tc{Scope n}, \tc{Name n}, and
+\Citeauthor{maclaurin23} propose a library with types \tc{Scope n}, \tc{Name n}, and
 \tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
 the type index \tc{n} is the name of the set at the type level. A value of type \tc{Name n} is a name that
 belongs to the set with type \tc{Scope n}. A value of type \tc{NameBinder n l} is
 a name in the set with type \tc{Scope l} which results from adding such single
-name to the set with type \tc{Scope n}. These types are meant to be used in
-the abstract syntax tree of terms. For instance:
+name to the set with type \tc{Scope n}. These types are to be used in
+the abstract syntax tree of terms:
 
 \begin{quotation}
 \begin{verbatim}
@@ -298,27 +290,26 @@ withFresh
   -> r
 \end{verbatim}
 
-With these measures, the foil is able to address the above requirements except the
-last one, which must be handled carefully in the unsafe part of their API. This
-is not discussed in their publication, but it can be handled in their \tc{addRename}
-function.\footnote{Compare the function \tc{addRename} in the publication with this implementation of it:
-{\scriptsize\url{https://hackage.haskell.org/package/free-foil-0.2.0/docs/src/Control.Monad.Foil.Internal.html\#addRename}}}\unsure{I
-don't think this paragraph is making any important point, you seem to be mostly
-talking to yourself here. I think you can remove.}
-\change{There needs to be a concluding paragraph here reflecting on the cost of
-  this interface, so that the next section can then be contrasted with it.}
-
-
 \subsection{The rapier, refined}
 \label{the-rapier-with-refinement-types}
 
-As an alternative to the traditional-type-based interface of the foil, we would
-like to propose a refinement type interface using Liquid Haskell. The code presented in
+With ingenious engineering and design, the foil meets its rather ambitious goal.
+But it's unfortunate that the authors needed to be ingenious. All things equal,
+we prefer program components to be straightforward. Because ingenious solutions
+take time, and because straightforward solutions are easier to adapt when the
+parameters of the problem evolve.
+
+We would
+like to argue that refinement types, like in Liquid Haskell, can server to
+reduce ingenuity in program design. The code presented in
 this section is available as
 \tc{Subst4.hs}\footnote{The simplest approach with Liquid Haskell:
   \sourcefile{Subst4.hs}}\change{You'll need to replace this filename before you
   submit.}
-in our repository. Liquid Haskell is a
+in our repository.
+
+\paragraph{A Liquid Haskell primer}
+Liquid Haskell is a
 plugin for Haskell. When given a program, Liquid Haskell
 checks statically that the functions in the program respect signatures
 provided by the programmer. There are two key differences between Liquid Haskell
@@ -352,13 +343,18 @@ of the rapier. For example, the \tc{freshVar} function can be given this signatu
 import Data.Set
 {-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
 \end{verbatim}
-
+\improvement{This doesn't have to be an assumption. It could also be proved,
+  presumably. Based on the signatures for lookupMax and such. Maybe there's an
+  interesting element to discuss about this: when ensuring invariants with sealed
+  types, the correctness of every single function is assumed. With liquid type
+  you have a choice: you can either assume it, or check it. Both choices are
+  reasonable and depend on the circumstance.}
 
 The predicates in the refinement types are in a language of expressions
 referred to as the logic language. For the sake of this paper, we can
-regard it as a subset of Haskell. Predicates are assembled from
-functions in the Haskell program and functions that might be available
-only in the logic language.
+regard it as a subset of Haskell. Predicates are assembled both from
+regular Haskell functions and functions that are
+only available in the logic language.
 A function like \tc{member}, which comes from the module \tc{Data.Set}
 in the \tc{containers} package, is linked by Liquid Haskell to the
 SMT solver's theory of sets.
@@ -383,7 +379,10 @@ substitute
 @-}
 substitute :: Set Int -> Subst Exp -> Exp -> Exp
 \end{verbatim}
-
+\change{I'm running out of steam, but we want to remove the example from the
+  substitution from the primer part. We probably want to move the primer to the
+  introduction honestly.}
+\paragraph{Scoped expressions}
 We first define a type alias \tc{ScopeExp S}, that is the type of all
 expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
 Liquid Haskell expects parameter names to start with an uppercase letter.}.
@@ -411,11 +410,13 @@ language.
 {-@ measure domain :: Subst e -> Set Int @-}
 \end{verbatim}
 
-This is how uninterpreted functions are declared. The function \tc{domain}
-stands for the set of variables in the domain of a substitution. However
-\tc{domain} is an uninterpreted symbol, it doesn't have a definition beyond its
-type signature. The meaning of \tc{domain} is given by the refinement type
-signatures in which \tc{domain} appears:
+This is how purely logic functions are declared. The function \tc{domain} stands
+for the set of variables in the domain of a substitution. However \tc{domain} is
+an uninterpreted symbol, it doesn't have a definition beyond its type signature.
+The meaning of \tc{domain} is given by the refinement type signatures in which
+\tc{domain} appears:\unsure{Something we should be part of the discussion
+  section at the end of the article, I think, is how do you actually instantiate
+  these axioms with an concrete substitution type?}
 
 \begin{verbatim}
 assume lookupSubst
@@ -430,31 +431,59 @@ assume extendSubst
   -> {v:_ | union (domain s) (singleton i) = domain v }
 \end{verbatim}
 
-With these signatures, whenever Liquid Haskell encounters an application
-of the function \tc{lookupSubst}, it will assume that the key is in the domain
-of the substitution if the lookup succeeds.
+With these signatures, whenever Liquid Haskell encounters an application of the
+function \tc{lookupSubst}, it will assume that the key is in the domain of the
+substitution if the lookup succeeds. Together \tc{domain}, \tc{lookupSubst}, and
+\tc{extendSubst} axiomatizes our substitutions. We don't need to axiomatize
+substitution, we could simply prove these lemmas, but using axioms makes sure
+that our case studies don't depend on a particular choice of representation for
+substitutions.
 
-Our refinement type signature of \tc{substitute} follows the type signature of
-\citeauthor{maclaurin23}. to the letter. With these annotations, Liquid Haskell can ensure that the
-implementation of substitution in Figure~\ref{rapier-style-substitution} meets
-all of the requirements in Section~\ref{the-rapier-with-stronger-types}, except
-for the first requirement, which we discuss further in the next subsection.
+This concludes our scope-management toolbox. We needed to impelement the
+\tc{freeVars} function, provide the \tc{ScopedExp} refined type, and the three
+primitives to axiomatize substitution. All the other supporting functions can be
+defined in user land. Contrast with an abstract-type based approach where a lot
+primitives must be provided by the abstract interface. The foil, in particular,
+need several types and type classes, and a wealth of primitive functions.
 
-Liquid Haskell ensures the last requirement because the
-refinement types of the recursive call demands the free variables of the lambda
-body to be in the domain of the substitution. Since these free variables might
-contain the binder variable, the substitution is not accepted without extending
-it first.
+With these tools, we can give the following signature to \tc{substitute}
+\begin{verbatim}
+{-@
+substitute
+  :: scope:Set Int
+  -> s:Subst (ScopedExp scope)
+  -> ScopedExp (domain s)
+  -> ScopedExp scope
+@-}
+substitute :: Set Int -> Subst Exp -> Exp -> Exp
+\end{verbatim}
+Remarkably, the implementation for \tc{substitute} is unchanged from the
+implementation, without static scope checking, of
+Figure~\ref{rapier-style-substitution}. This won't always be the case, but this
+exemplifies how using Liquid Haskell to enforce invariants tends to great less
+boilerplate than a type-based approach.
 
-\subsection{Ensuring the scope set is checked}
+The type of lambda terms is also unchanged, as the well-scoping invariant is
+applied to a whole term at once. A nice consequence of that is that functions
+that don't benefit from all the scope checking business can simply take a naked
+term and ignore it. The \tc{freeVars} function, for example, is implemented on
+naked terms.\unsure{I'm considering adding a comment on the fact that we can use
+  freeVars to provide an initial scope for the substitute function}
+
+\subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
 
-Checking that the scope set is actually used, and therefore that binders to rename
-are not forgotten, admits at least two approaches.\improvement{I don't think we
-  need to care about the fact that there's more than one way, be assertive and
-  commit to a choice} In both cases we will prevent
-the user from making a recursive call to \tc{substitute} without checking first
-if the binder needs renaming.
+\change{I don't have enough time today but my intent is to change the narrative
+  of this section to show that you can, and it's beneficial mix the abstract
+  type style and the refinement type style. The game plan is to say that a
+  property like “a scope is only ever extended with a fresh variable” aren't
+  natural with refinement types. But they are incredibly easy with sealed
+  types.} Checking that the scope set is actually used, and therefore that
+binders to rename are not forgotten, admits at least two
+approaches.\improvement{I don't think we need to care about the fact that
+  there's more than one way, be assertive and commit to a choice} In both cases
+we will prevent the user from making a recursive call to \tc{substitute} without
+checking first if the binder needs renaming.
 
 The first approach prevents the user from inserting a name into a scope if that
 name is in the scope already. In such case, a fresh name has to be inserted instead.
@@ -1277,3 +1306,5 @@ candidate to impact programming practice in the future.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 \end{document}
+
+% LocalWords:  invariants axiomatizes axiomatize
