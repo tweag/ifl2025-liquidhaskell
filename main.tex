@@ -215,7 +215,8 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
       is later used instead of a fresh name.
 \item Every traversed binder must be renamed if it's already a member of the
       scope set.\unsure{Is this true? What happens if you don't rename and
-      simply shadow?}
+      simply shadow? Answer: then it can capture free variables in the range
+        of the substitution.}
 \item When renaming a binder, the new name must not belong to the scope set.
 \item When renaming a binder, the occurrences of the old bound variable need
       to be substituted with the new name.
@@ -416,7 +417,8 @@ an uninterpreted symbol, it doesn't have a definition beyond its type signature.
 The meaning of \tc{domain} is given by the refinement type signatures in which
 \tc{domain} appears:\unsure{Something we should be part of the discussion
   section at the end of the article, I think, is how do you actually instantiate
-  these axioms with an concrete substitution type?}
+  these axioms with an concrete substitution type? Answer: you copy the assumptions
+  to address whatever substitution representation is needed.}
 
 \begin{verbatim}
 assume lookupSubst
@@ -468,7 +470,11 @@ applied to a whole term at once. A nice consequence of that is that functions
 that don't benefit from all the scope checking business can simply take a naked
 term and ignore it. The \tc{freeVars} function, for example, is implemented on
 naked terms.\unsure{I'm considering adding a comment on the fact that we can use
-  freeVars to provide an initial scope for the substitute function}
+  freeVars to provide an initial scope for the substitute function. Note:
+  the foil starts with an identity substitution, that is, one that maps every
+  variable to itself. And we do the same in our unification code. The substitution
+  domain can be narrowed if desired, but starting with the identity doesn't affect
+  the static checks.}
 
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
