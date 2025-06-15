@@ -19,6 +19,7 @@
       \setlength{\marginparwidth}{1.4cm}
 
       \newcommandx{\unsure}[2][1=]{\todo[linecolor=orange,backgroundcolor=orange!25,bordercolor=orange,#1]{#2}}
+      \newcommandx{\unsureF}[2][1=]{\todo[linecolor=orange,backgroundcolor=lightgray!25,bordercolor=orange,#1]{#2}}
       \newcommandx{\info}[2][1=]{\todo[linecolor=green,backgroundcolor=green!25,bordercolor=green,#1]{#2}}
       \newcommandx{\change}[2][1=]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{#2}}
       \newcommandx{\inconsistent}[2][1=]{\todo[linecolor=red,backgroundcolor=red!25,bordercolor=red,#1]{#2}}
@@ -28,6 +29,7 @@
     \else
       \renewcommand{\todo}{}
       \newcommandx{\unsure}[2][1=]{{}}
+      \newcommandx{\unsureF}[2][1=]{{}}
       \newcommandx{\info}[2][1=]{{}}
       \newcommandx{\change}[2][1=]{{}}
       \newcommandx{\inconsistent}[2][1=]{{}}
@@ -295,6 +297,8 @@ withFresh
 \label{the-rapier-with-refinement-types}
 
 With ingenious engineering and design, the foil meets its rather ambitious goal.
+\unsureF{Not all of it, they missed the last requirement. I miss a summary at the
+end of the previous section making explicit what the foil achieved.}
 But it's unfortunate that the authors needed to be ingenious. All things equal,
 we prefer program components to be straightforward. Because ingenious solutions
 take time, and because straightforward solutions are easier to adapt when the
@@ -441,7 +445,7 @@ substitution, we could simply prove these lemmas, but using axioms makes sure
 that our case studies don't depend on a particular choice of representation for
 substitutions.
 
-This concludes our scope-management toolbox. We needed to impelement the
+This concludes our scope-management toolbox. We needed to implement the
 \tc{freeVars} function, provide the \tc{ScopedExp} refined type, and the three
 primitives to axiomatize substitution. All the other supporting functions can be
 defined in user land. Contrast with an abstract-type based approach where a lot
@@ -475,6 +479,9 @@ naked terms.\unsure{I'm considering adding a comment on the fact that we can use
   variable to itself. And we do the same in our unification code. The substitution
   domain can be narrowed if desired, but starting with the identity doesn't affect
   the static checks.}
+\unsureF{I'm also missing a summary here of what our annotations have achieved. It
+should be noted in particular, that this doesn't address requirement (2) which
+motivates the discussion in the next subsection.}
 
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
