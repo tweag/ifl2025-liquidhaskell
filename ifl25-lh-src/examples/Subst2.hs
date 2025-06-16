@@ -23,20 +23,19 @@ freeVars = \case
 -- A type of scope sets with controlled insertion
 --------------------------------------------------
 
-data Scope = UnsafeScope (Set Int)
-{-@ data Scope = UnsafeScope (Set Int) @-}
+-- BUG: should be a newtype, but Liquid Haskell is confused by newtypes at the
+-- moment.
 
-{-@ inline member @-}
-member :: Int -> Scope -> Bool
-member i (UnsafeScope s) = Set.member i s
+-- unsafeUnScope is not intended to be used directly by the user
+data Scope = UnsafeScope { unsafeUnScope :: Set Int }
+{-@ data Scope = UnsafeScope { unsafeUnScope :: Set Int } @-}
 
-{-@ inline isSubsetOfScope @-}
-isSubsetOfScope :: Set Int -> Scope -> Bool
-isSubsetOfScope s (UnsafeScope s') = isSubsetOf s s'
+{-@ predicate Member E S = Set.member E (unsafeUnScope S) @-}
+{-@ predicate IsSubsetOfScope S SS = Set.isSubsetOf S (unsafeUnScope SS) @-}
 
 {-@ inline union @-}
 union :: Scope -> Scope -> Scope
-union (UnsafeScope s1) (UnsafeScope s2) = UnsafeScope (Set.union s1 s2)
+union s1 s2 = UnsafeScope (Set.union (unsafeUnScope s1) (unsafeUnScope s2))
 
 {-@ inline singleton @-}
 singleton :: Int -> Scope
@@ -47,7 +46,7 @@ withRefreshed
   :: s:Scope
   -> i:Int
   -> {p:(Scope, Int)
-     |  not (member (snd p) s)
+     |  not (Member (snd p) s)
      && fst p == union s (singleton (snd p))
      }
 @-}
@@ -63,7 +62,7 @@ freshVar s = case lookupMax s of
     Nothing -> 0
     Just i -> i + 1
 
-{-@ type ScopedExp S = {e:Exp | isSubsetOfScope (freeVars e) S} @-}
+{-@ type ScopedExp S = {e:Exp | IsSubsetOfScope (freeVars e) S} @-}
 
 
 --------------------------------------------
@@ -88,7 +87,7 @@ extendSubst (Subst s) i e = Subst ((i, e) : s)
 assume lookupSubst
   :: i:Int
   -> xs:Subst e
-  -> {m:Maybe e | isJust m == member i (domain xs) }
+  -> {m:Maybe e | isJust m == Member i (domain xs) }
 @-}
 lookupSubst :: Int -> Subst e -> Maybe e
 lookupSubst i (Subst s) = lookup i s

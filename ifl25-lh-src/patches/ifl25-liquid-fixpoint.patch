@@ -1,14 +1,12 @@
-Date: Thu, 5 Jun 2025 22:37:19 +0000
-
 ---
- src/Language/Fixpoint/Smt/Theories.hs   | 42 ++++++++++++++++++++++++-
- src/Language/Fixpoint/Types/Names.hs    | 20 ++++++++++--
+ src/Language/Fixpoint/Smt/Theories.hs   | 45 ++++++++++++++++++++++++-
+ src/Language/Fixpoint/Types/Names.hs    | 20 +++++++++--
  src/Language/Fixpoint/Types/Sorts.hs    |  4 +++
  src/Language/Fixpoint/Types/Theories.hs |  8 ++++-
- 4 files changed, 69 insertions(+), 5 deletions(-)
+ 4 files changed, 72 insertions(+), 5 deletions(-)
 
 diff --git a/src/Language/Fixpoint/Smt/Theories.hs b/src/Language/Fixpoint/Smt/Theories.hs
-index 24f8709b..90e3dd34 100644
+index 24f8709b..0fa9ffd4 100644
 --- a/src/Language/Fixpoint/Smt/Theories.hs
 +++ b/src/Language/Fixpoint/Smt/Theories.hs
 @@ -259,6 +259,8 @@ solverPreamble cfg
@@ -20,7 +18,7 @@ index 24f8709b..90e3dd34 100644
  
  type Preamble = (PreambleCondition, Builder)
  
-@@ -291,6 +293,21 @@ stringPreamble _
+@@ -291,6 +293,22 @@ stringPreamble _
      , (SAll, bFun' strConcat [fromText string, fromText string] (fromText string))
      ]
  
@@ -37,12 +35,13 @@ index 24f8709b..90e3dd34 100644
 +    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_difference_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int)) (match oa0 ((None None) ((Some _) (match oa1 ((None oa0) ((Some _) None)))))))")
 +    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_difference_strict_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int)) (match oa0 ((None None) ((Some a0) (match oa1 ((None oa0) ((Some a1) (ite (= a0 a1) None oa0))))))))")
 +    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_isSubsetOf ((x (Array Int (Option (Set Int)))) (y (Array Int (Option (Set Int))))) Bool (= ((as const (Array Int (Option (Set Int)))) None) ((_ map IntMapSetInt_difference_strict_p2p) x y)))")
++    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_keys_p2p ((oa (Option (Set Int)))) Bool ((_ is Some) oa))")
 +    ]
 +
  --------------------------------------------------------------------------------
  -- | Exported API --------------------------------------------------------------
  --------------------------------------------------------------------------------
-@@ -305,6 +322,7 @@ smt2SmtSort SInt         = "Int"
+@@ -305,6 +323,7 @@ smt2SmtSort SInt         = "Int"
  smt2SmtSort SReal        = "Real"
  smt2SmtSort SBool        = "Bool"
  smt2SmtSort SString      = fromText string
@@ -50,7 +49,7 @@ index 24f8709b..90e3dd34 100644
  smt2SmtSort (SSet a)     = key "Set" (smt2SmtSort a)
  smt2SmtSort (SBag a)     = key "Bag" (smt2SmtSort a)
  smt2SmtSort (SArray a b) = key2 "Array" (smt2SmtSort a) (smt2SmtSort b)
-@@ -410,11 +428,30 @@ interpSymbols :: SMTSolver -> [(Symbol, TheorySymbol)]
+@@ -410,11 +429,32 @@ interpSymbols :: SMTSolver -> [(Symbol, TheorySymbol)]
  --------------------------------------------------------------------------------
  interpSymbols cfg =
    [
@@ -79,10 +78,12 @@ index 24f8709b..90e3dd34 100644
 +      FFunc intMapSetIntSort $ FFunc intMapSetIntSort intMapSetIntSort
 +  , interpSym "IntMapSetInt_isSubsetOf" "IntMapSetInt_isSubsetOf" $
 +      FFunc intMapSetIntSort $ FFunc intMapSetIntSort boolSort
++  , interpSym "IntMapSetInt_keys" "(_ map IntMapSetInt_keys_p2p)" $
++      FFunc intMapSetIntSort (setSort intSort)
  
    , interpSym arrConstM  "const"  (FAbs 0 $ FFunc (FVar 1) mapArrSort)
    , interpSym arrSelectM "select" (FAbs 0 $ FFunc mapArrSort $ FFunc (FVar 0) (FVar 1))
-@@ -554,6 +591,9 @@ interpSymbols cfg =
+@@ -554,6 +594,9 @@ interpSymbols cfg =
      setBopSort = FAbs 0 $ FFunc (setSort $ FVar 0) $ FFunc (setSort $ FVar 0) (setSort $ FVar 0)
      bagBopSort = FAbs 0 $ FFunc (bagSort $ FVar 0) $ FFunc (bagSort $ FVar 0) (bagSort $ FVar 0)
  
@@ -226,5 +227,5 @@ index 01a537d8..a80f8724 100644
 \ No newline at end of file
 +         }
 -- 
-2.49.0
+2.47.2
 

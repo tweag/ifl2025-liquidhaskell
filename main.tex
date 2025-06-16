@@ -477,12 +477,12 @@ Figure~\ref{rapier-style-substitution} to
   | member i scope ->
       Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
 \end{verbatim}
-and it will still typecheck\unsure{Is this true? \@Facundo: please check}. So that
+and it will still typecheck. So that
 (in pseudo-Haskell)
 
-$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$
+$$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$$
 
-Which is certainly now what we want. So what's going on? And how can we address
+Which is certainly not what we want. So what's going on? And how can we address
 it? The signature is, in fact, indifferent to whether the binder \tc{i}
 is already present or not in the scope set. There's not mechanism to prevent
 adding a binder that is already present in the scope set. And, more to the
