@@ -81,6 +81,7 @@
 \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
     fontsize=\codeblocksize,
 }
+\newtheorem{principle}{Principle}
 
 \begin{document}
 \begin{abstract}
@@ -104,55 +105,38 @@
 
 \section{Introduction}
 
-Application Programming Interfaces (APIs) in programming languages are
-typically described with the types of their operations alongside
-supplementary documentation.
-In a strongly typed language, the author of an interface can aim to enrich the
-types to represent most of the constraints and relationships between the
-operations, or she could decide to keep the types as simple as possible.
+\change{Notes so that I[Arnaud] don't forget, principles: refinement types
+  provide subtyping; refinement types have smaller minimal trusted code base,
+  but you can choose how large the trusted code base is with assumptions; choose
+  between abstract types and refinement types depending on the kind of property
+  and go for what's easier} SMT solvers are useful to the ordinary activity of
+programming. This is what we would like to convince the reader of. More
+precisely, our claim is that an SMT solver well-integrated in the static checks
+of a compiler, complements an ordinary type checker when composing programs.
 
-Rich types enable the type checker to detect interface misuse,
-thus preventing execution failures or
-incorrect results. However, this richness often increases interface complexity,
-potentially making it cumbersome to use. Developers must therefore strike a
-balance.
+The experience of programming with types is that of collaborating with the
+compiler to write the programs with want to write. SMT solvers can be use much
+the same.
 
-The options are not just to lean or not to lean on the type checker, though. In
-this paper we analyze a couple of use cases in the Haskell programming language
-from the perspective of a third alternative. We implement the static checks of
-the interfaces with automated theorem provers, more specifically, SMT solvers.
-And we connect SMT solvers with Haskell by using refinement types as implemented
-in the Liquid Haskell plugin~\cite{vazou14b}.
+SMT solvers, when it comes to their application to programming, are usually
+paired with terms like ``formal methods'' or ``verification'' in the
+literature~\cite{barnett05,demoura08,zinzin17,swamy22}. We would like to
+challenge the wisdom that we reach for SMT-solver-based tools when we need
+formal methods. We would benefit from using SMT solvers in mundane programs.
 
-While SMT solvers have always been intended to support programming~\cite{barnett05, demoura08}, it has
-been less discussed how their integration through refinement types influences
-interface design. Therefore, our first contribution is a study of
-capture-avoiding substitution with safety checks implemented with Liquid Haskell,
-where we compare with an earlier attempt based on the Haskell type checker, dubbed
-\textit{the foil}~\cite{maclaurin23}
-(Section~\ref{capture-avoiding-substitution}). Later on, we implement safety checks
-in an implementation of unification (Section~\ref{unification}), a more demanding
-example where extending earlier approaches would be some challenge. Our
-attempt with unification is only partially successful since we had to
-modify the Liquid Haskell implementation to support it. These modifications
-constitute our third contribution, and demonstrate the technical feasibility
-of the approach. Lastly, we offer a discussion
-of the limitations of both the Liquid Haskell implementation (Section~\ref{limitations-of-liquid-haskell}) and the
-general approach of integrating SMT solvers via refinement
-types (Section~\ref{SMT-solvers-for-interface-checks}).
+We will be arguing, in particular, that refinement type, in the guise of Liquid
+Haskell~\cite{vazou14b}, is a tool that lets you do just that. Even tough Liquid
+Hakell is also usually invoked together with phrases like ``formal methods'' or
+``verification''~\cite{vazou14,lehmann21,liu20,redmond23}. We would like to
+challenge the wisdom that Liquid Haskell is only for formal method as well.
 
-Over the years SMT solvers have been used effectively to statically check pointer
-arithmetic, data structure invariants~\cite{vazou14}, memory safety, side-channel
-safety in cryptographic algorithms~\cite{zinzin17},
-safe parsing of binary input~\cite{swamy22}, data access policies in web applications~\cite{lehmann21},
-commutativity of operations on replicated data types~\cite{liu20}, causal ordering in
-broadcast protocols~\cite{redmond23}, and more. There is no question of whether SMT solvers are
-helpful but whether they can be integrated conveniently in everyday
-programming, or more specifically in this article, in offloading safety static
-checks from the type checker.
-We anticipate that the integration of SMT solvers will make programming more
-pleasant and static checks more powerful in these and other scenarios to come.
-
+Through a case study, will we argue, even though the technology isn't really
+ready yet, for a future where programming, ordinary programming, is made easier
+and more pleasant thanks to refinements types and SMT solvers. Our case study,
+will be the handling of binders' scopes in compilers. A secondary contribution
+is a prototype implementation of a theory of finite maps for Liquid Haskell's
+solver, to support our case study.\improvement{It would be better to have a
+  reference to a part of the paper for the implementation}
 
 \section{Capture-avoiding substitutions}
 \label{capture-avoiding-substitution}
