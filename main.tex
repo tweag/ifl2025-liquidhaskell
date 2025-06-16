@@ -506,21 +506,19 @@ point, how could there be? “Never add a binder to the scope set that is alread
 present” isn't a set theoretical property. It's not even a functional property.
 It's a kind of temporal invariant.
 
-Temporal invariants aren't naturally expressed in the logic of Liquid Haskell.
+Such temporal invariants aren't naturally expressed in the logic of Liquid Haskell.
 But they're quite easy to implement with abstract types. So let's use an abstract
 type. What we need to do is to ensure that whenever we see a new binder it must
 be tested against the scope, and that this test is packaged together with fresh
 name generation.
 
 We follow the foil (see Section~\ref{the-rapier-with-stronger-types}) and
-introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}.
-
-The first approach prevents the user from inserting a name into a scope if that
-name is in the scope already. In such case, a fresh name has to be inserted
-instead.\improvement{Add member in the code snippet} The types are a little
+introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}. \improvement{Add member in the code snippet} The types are a little
 simpler because we don't need existential quantification to reflect value-level
 objects at the type level, but otherwise these are the same functions and types
-as in Section~\ref{the-rapier-with-stronger-types}.
+as in Section~\ref{the-rapier-with-stronger-types}.\unsure{Maybe we need to
+  redesign this code snippet for an abstract member function. We need to discuss
+  this}
 
 \begin{verbatim}
 newtype Scope = UnsafeScope (Set Int)
@@ -536,7 +534,13 @@ withRefreshed (UnsafeScope s) i
 \end{verbatim}
 
 We needed to add a refinement type signature to \tc{withRefreshed} to serve as
-glue with the Liquid Haskell world.\change{Arnaud's at this point for now}
+glue with the Liquid Haskell world. This refinement type signature tells Liquid
+Haskell precisely that \tc{withRefreshed} does both membership checking and
+fresh variable call: the variable returned by \tc{withRefreshed} isn't in the
+old scope but is in the new scope.
+
+It then suffices to seal the type \tc{Scope} to enforce that binders are always
+refreshed when traversed. The full code for this example can be found in the
 
 The refinement type signature of the function captures the fact that the returned
 name is not in the input set \tc{s}, and that the returned set is an
@@ -544,113 +548,112 @@ extension of the input. We also need to wrap our sets of names into a
 \tc{newtype} in order to hide the \tc{insert} operation from the programmer,
 otherwise she could accidentally omit using \tc{withRefreshed} to create
 new scope sets. This solution is available in the file
-\tc{Subst5.hs}\footnote{A solution that addresses all requirements:
-  \sourcefile{Subst5.hs}}\change{Just provide a single solution in the artifact}
-in our repository.
+\sourcefile{Subst2.hs}\critical{Make sure that this is the right file name in
+  when submitting}
 
-The second approach, avoid introducing \tc{withRefreshed} and modifying the
-types in the program by providing a more stringent refinement type for
-\tc{substitute}.
+% The second approach, avoid introducing \tc{withRefreshed} and modifying the
+% types in the program by providing a more stringent refinement type for
+% \tc{substitute}.
 
-\begin{verbatim}
-substitute
-  :: scope:Set Int
-  -> s:Subst (ScopedExp scope)
-  -> ei:ScopedExp (domain s)
-  -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
-\end{verbatim}
+% \begin{verbatim}
+% substitute
+%   :: scope:Set Int
+%   -> s:Subst (ScopedExp scope)
+%   -> ei:ScopedExp (domain s)
+%   -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
+% \end{verbatim}
 
-In this signature we are spelling exactly what the expected free variables in the result are.
-We use a function \tc{freeVarsSubst} such that
-\tc{freeVarsSubst (freeVars e) s} computes the free variables in the range of the
-substitution \tc{s} that is actually used when applying it
-to the expression \tc{e}. We provide an example representation for substitutions and
-a schematic presentation of \tc{freeVarsSubst}, but in our implementation we
-are careful to keep the checks agnostic on the actual representation of
-substitutions.
+% In this signature we are spelling exactly what the expected free variables in the result are.
+% We use a function \tc{freeVarsSubst} such that
+% \tc{freeVarsSubst (freeVars e) s} computes the free variables in the range of the
+% substitution \tc{s} that is actually used when applying it
+% to the expression \tc{e}. We provide an example representation for substitutions and
+% a schematic presentation of \tc{freeVarsSubst}, but in our implementation we
+% are careful to keep the checks agnostic on the actual representation of
+% substitutions.
 
-\begin{verbatim}
-type Subst e = [(Int, e)]
-freeVarsSubst :: Set Int -> Subst Exp -> Set Int
-freeVarsSubst used [] = empty
-freeVarsSubst used ((i, e) : xs) =
-  | member i used = -- only take the first occurrence of i
-      union (freeVars e) (freeVarsSubst (difference used (singleton i)) xs)
-  | otherwise = freeVarsSubst used xs
-\end{verbatim}
+% \begin{verbatim}
+% type Subst e = [(Int, e)]
+% freeVarsSubst :: Set Int -> Subst Exp -> Set Int
+% freeVarsSubst used [] = empty
+% freeVarsSubst used ((i, e) : xs) =
+%   | member i used = -- only take the first occurrence of i
+%       union (freeVars e) (freeVarsSubst (difference used (singleton i)) xs)
+%   | otherwise = freeVarsSubst used xs
+% \end{verbatim}
 
-Unless we rename all the binders unconditionally, it is no longer
-possible to ignore the scope set when going under binders since the calculation
-of free variables doesn't add up:
-If the name of the binder is in the free variables of the range of the substitution,
-it may show up in the free variables of the result, but leaving it unrenamed would
-cause the call to the function \tc{freeVars} in the expected return refinement type
-to disagree.
+% Unless we rename all the binders unconditionally, it is no longer
+% possible to ignore the scope set when going under binders since the calculation
+% of free variables doesn't add up:
+% If the name of the binder is in the free variables of the range of the substitution,
+% it may show up in the free variables of the result, but leaving it unrenamed would
+% cause the call to the function \tc{freeVars} in the expected return refinement type
+% to disagree.
 
-Unfortunately, this refinement type signature is more laborious to check, as
-\tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
-function.
+% Unfortunately, this refinement type signature is more laborious to check, as
+% \tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
+% function.
 
-\begin{verbatim}
-lemmaFreeVarsSubstSing :: i:_ -> s:_
-  -> { freeVarsSubst (singleton i) s == fromMaybe empty (lookupSubst i s) }
+% \begin{verbatim}
+% lemmaFreeVarsSubstSing :: i:_ -> s:_
+%   -> { freeVarsSubst (singleton i) s == fromMaybe empty (lookupSubst i s) }
 
-lemmaFreeVarsSubstUnion :: s1:_ -> s2:_ -> s:_
-  -> { freeVarsSubst (union s1 s2) s
-         == union (freeVarsSubst s1 s) (freeVarsSubst s2 s) }
+% lemmaFreeVarsSubstUnion :: s1:_ -> s2:_ -> s:_
+%   -> { freeVarsSubst (union s1 s2) s
+%          == union (freeVarsSubst s1 s) (freeVarsSubst s2 s) }
 
-lemmaFreeVarsSubstExtend
-  :: scope:_ -> used:_
-  -> i:_ -> {e:_ | Data.Set.null (intersection (freeVars e) scope)}
-  -> s:Subst (ScopedExp scope)
-  -> { freeVarsSubst (difference used (singleton i)) s ==
-       difference (freeVarsSubst used (extendSubst s i e)) (freeVars e)
-     }
-\end{verbatim}
+% lemmaFreeVarsSubstExtend
+%   :: scope:_ -> used:_
+%   -> i:_ -> {e:_ | Data.Set.null (intersection (freeVars e) scope)}
+%   -> s:Subst (ScopedExp scope)
+%   -> { freeVarsSubst (difference used (singleton i)) s ==
+%        difference (freeVarsSubst used (extendSubst s i e)) (freeVars e)
+%      }
+% \end{verbatim}
 
-Each lemma requires writing a recursive function for Liquid Haskell to
-check it, which is additional effort. Here's the proof for
-\tc{lemma\_free\-Vars\-Subst\_union}.
+% Each lemma requires writing a recursive function for Liquid Haskell to
+% check it, which is additional effort. Here's the proof for
+% \tc{lemma\_free\-Vars\-Subst\_union}.
 
-\begin{verbatim}
-lemmaFreeVarsSubstUnion :: Set Int -> Set Int -> Subst Exp -> ()
-lemmaFreeVarsSubstUnion _ _ [] = ()
-lemmaFreeVarsSubstUnion s1 s2 ((i, _) : xs) =
-  lemmaFreeVarsSubstUnion
-    (difference s1 (singleton i)) (difference s2 (singleton i)) xs
-\end{verbatim}
+% \begin{verbatim}
+% lemmaFreeVarsSubstUnion :: Set Int -> Set Int -> Subst Exp -> ()
+% lemmaFreeVarsSubstUnion _ _ [] = ()
+% lemmaFreeVarsSubstUnion s1 s2 ((i, _) : xs) =
+%   lemmaFreeVarsSubstUnion
+%     (difference s1 (singleton i)) (difference s2 (singleton i)) xs
+% \end{verbatim}
 
-The recursive function follows the structure of an inductive proof,
-with much of the folding, unfolding, and set properties applied
-automatically. And this is similar for the proofs of the other lemmas.
-Then the lemmas need to be applied in the cases of \tc{substitute}.
+% The recursive function follows the structure of an inductive proof,
+% with much of the folding, unfolding, and set properties applied
+% automatically. And this is similar for the proofs of the other lemmas.
+% Then the lemmas need to be applied in the cases of \tc{substitute}.
 
-\begin{verbatim}
-substitute scope s e0 = case e0 of
-  Var i -> case lookupSubst i s of
-    Nothing -> e0
-    Just e -> e ? lemmaFreeVarsSubstSing i s
-  App e0 e1 ->
-    App (substitute scope s e0) (substitute scope s e1)
-      ? lemmaFreeVarsSubstUnion (freeVars e0) (freeVars e1) s
-  Lam i e
-    | member i scope,
-      let j = freshVar scope ->
-        Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
-          ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var j) s
-    | otherwise ->
-        Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
-          ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var i) s
-\end{verbatim}
+% \begin{verbatim}
+% substitute scope s e0 = case e0 of
+%   Var i -> case lookupSubst i s of
+%     Nothing -> e0
+%     Just e -> e ? lemmaFreeVarsSubstSing i s
+%   App e0 e1 ->
+%     App (substitute scope s e0) (substitute scope s e1)
+%       ? lemmaFreeVarsSubstUnion (freeVars e0) (freeVars e1) s
+%   Lam i e
+%     | member i scope,
+%       let j = freshVar scope ->
+%         Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
+%           ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var j) s
+%     | otherwise ->
+%         Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+%           ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var i) s
+% \end{verbatim}
 
-The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
-brings the lemma into consideration of Liquid Haskell when checking the
-first argument without evaluating the recursive function that stands for
-the lemma proof. This solution is available in the file
-\tc{Subst3.hs}\footnote{A solution that addresses all requirements without
-  changing types in the program: \sourcefile{Subst3.hs}}\change{A single Subst
-  file please}
-in our repository.
+% The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
+% brings the lemma into consideration of Liquid Haskell when checking the
+% first argument without evaluating the recursive function that stands for
+% the lemma proof. This solution is available in the file
+% \tc{Subst3.hs}\footnote{A solution that addresses all requirements without
+%   changing types in the program: \sourcefile{Subst3.hs}}\change{A single Subst
+%   file please}
+% in our repository.
 
 
 \subsection{Comparison}
