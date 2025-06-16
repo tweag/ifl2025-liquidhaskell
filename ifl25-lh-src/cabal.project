@@ -1,0 +1,25 @@
+with-compiler: ghc-9.12.2
+
+packages: ./liquidhaskell
+          ./liquid-fixpoint
+          ./liquidhaskell/liquid-parallel
+          ./liquidhaskell/liquid-prelude
+          ./liquidhaskell/liquid-vector
+          ./liquidhaskell/liquidhaskell-boot
+
+allow-newer:
+  ,active:base
+  ,dual-tree:base
+  ,fsnotify:text
+  ,monoid-extras:base
+  ,statestack:base
+
+package liquidhaskell
+  ghc-options: -j
+
+package liquidhaskell-boot
+  ghc-options: -j
+
+constraints:
+  -- vector-0.13.2.0 breaks store-0.7.18
+  vector <= 0.13.1.0
