@@ -215,10 +215,8 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 \begin{enumerate}
 \item Every traversed binder must be added to the scope set, lest their name
       is later used instead of a fresh name.
-\item Every traversed binder must be renamed if it's already a member of the
-      scope set.\unsure{Is this true? What happens if you don't rename and
-      simply shadow? Answer: then it can capture free variables in the range
-        of the substitution.}
+\item \label{req:always-rename} Every traversed binder must be renamed if it's already a member of the
+      scope set, because this name could otherwise be captured as above.
 \item When renaming a binder, the new name must not belong to the scope set.
 \item When renaming a binder, the occurrences of the old bound variable need
       to be substituted with the new name.
@@ -486,23 +484,43 @@ motivates the discussion in the next subsection.}
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
 
-\change{I don't have enough time today but my intent is to change the narrative
-  of this section to show that you can, and it's beneficial mix the abstract
-  type style and the refinement type style. The game plan is to say that a
-  property like “a scope is only ever extended with a fresh variable” aren't
-  natural with refinement types. But they are incredibly easy with sealed
-  types.} Checking that the scope set is actually used, and therefore that
-binders to rename are not forgotten, admits at least two
-approaches.\improvement{I don't think we need to care about the fact that
-  there's more than one way, be assertive and commit to a choice} In both cases
-we will prevent the user from making a recursive call to \tc{substitute} without
-checking first if the binder needs renaming.
+Using the signature above, however, isn't quite error-proof: it does not enforce
+Requirement~(\ref{req:always-rename}) from
+Section~\ref{the-rapier-with-stronger-types}.
+So we could change the penultimate case of \tc{substitute} from
+Figure~\ref{rapier-style-substitution} to
+\begin{verbatim}
+  | member i scope ->
+      Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+\end{verbatim}
+and it will still typecheck\unsure{Is this true? \@Facundo: please check}. So that
+(in pseudo-Haskell)
+
+$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$
+
+Which is certainly now what we want. So what's going on? And how can we address
+it? The signature is, in fact, indifferent to whether the binder \tc{i}
+is already present or not in the scope set. There's not mechanism to prevent
+adding a binder that is already present in the scope set. And, more to the
+point, how could there be? “Never add a binder to the scope set that is already
+present” isn't a set theoretical property. It's not even a functional property.
+It's a kind of temporal invariant.
+
+Temporal invariants aren't naturally expressed in the logic of Liquid Haskell.
+But they're quite easy to implement with abstract types. So let's use an abstract
+type. What we need to do is to ensure that whenever we see a new binder it must
+be tested against the scope, and that this test is packaged together with fresh
+name generation.
+
+We follow the foil (see Section~\ref{the-rapier-with-stronger-types}) and
+introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}.
 
 The first approach prevents the user from inserting a name into a scope if that
-name is in the scope already. In such case, a fresh name has to be inserted instead.
-And it is not possible to skip updating the scope since the other enforced checks
-demand it. This is the new function that we offer to insert elements into a scope
-set.
+name is in the scope already. In such case, a fresh name has to be inserted
+instead.\improvement{Add member in the code snippet} The types are a little
+simpler because we don't need existential quantification to reflect value-level
+objects at the type level, but otherwise these are the same functions and types
+as in Section~\ref{the-rapier-with-stronger-types}.
 
 \begin{verbatim}
 newtype Scope = UnsafeScope (Set Int)
@@ -516,6 +534,9 @@ withRefreshed (UnsafeScope s) i
   | Set.member i s = let j = freshVar s in (UnsafeScope (insert j s), j)
   | otherwise = (UnsafeScope (insert i s), i)
 \end{verbatim}
+
+We needed to add a refinement type signature to \tc{withRefreshed} to serve as
+glue with the Liquid Haskell world.\change{Arnaud's at this point for now}
 
 The refinement type signature of the function captures the fact that the returned
 name is not in the input set \tc{s}, and that the returned set is an
