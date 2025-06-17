@@ -135,8 +135,8 @@ ready yet, for a future where programming, ordinary programming, is made easier
 and more pleasant thanks to refinements types and SMT solvers. Our case study,
 will be the handling of binders' scopes in compilers. A secondary contribution
 is a prototype implementation of a theory of finite maps for Liquid Haskell's
-solver, to support our case study.\improvement{It would be better to have a
-  reference to a part of the paper for the implementation}
+solver, to support our case study, and which we discuss in
+Section~\ref{extending-liquid-haskell}.
 
 \paragraph{A Liquid Haskell primer}
 \change{We need to expunge this primer of scope-specific examples, and move
@@ -1051,38 +1051,83 @@ assumed to work as the refinement type signature describes for the sake of
 this study.
 
 
-\subsection{Limitations of Liquid Haskell}
-\label{limitations-of-liquid-haskell}
+\subsection{Extending Liquid Haskell to support \tc{IntMap}}
+\label{extending-liquid-haskell}
 
-The checking of unification is a plausible future, though one that requires
-some enhancements to Liquid Haskell and several bug fixes. Liquid Haskell does
-not support reasoning with \tc{Map}s or \tc{IntMap}s at the
-moment.\footnote{Issue to support maps in the Liquid Haskell repository: \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}} Our
-modifications to Liquid Haskell allow us to reason with the type
-\tc{IntMap (Set Int)}. While these modifications can be easily adapted to
-support other instantiations of \tc{Map a b} or \tc{IntMap b}, a general
+When we started our study, Liquid Haskell didn't support using the SMT solver
+to reason with \tc{Map}s or \tc{IntMap}s.\footnote{Issue to support maps in the Liquid Haskell repository: \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}}
+In this section, we describe our modification to Liquid Haskell in order to address
+this problem. While we can still use Liquid Haskell without these
+changes, we would lose in automation. The tooling would require a lot more
+lemmas from the user to check that the code handles the maps as expected.
+All our modifications can be found in \tc{ifl25-\allowbreak liquidhaskell.patch}
+and \sourcefile{ifl25-\allowbreak liquid-\allowbreak fix\-point.patch}.
+
+We modified Liquid Haskell to leverage the SMT solver to reason with the type
+\tc{IntMap (Set Int)}. These modifications can be easily adapted to
+support other instantiations of \tc{Map a b} or \tc{IntMap b}, but a general
 solution that can be reused for any instantiation of the type parameters still
 needs to be implemented.
 
-There are syntax changes needed in the annotations of Liquid Haskell to support
-this, and there is a limitation to overcome in old versions of SMTLIB, the standard
-interface to SMT solvers~\cite{BarFT-RR-25} that require user defined functions to
-have monomorphic types. While newer versions of the standard allow for polymorphic
-types, these still need to be implemented by SMT solvers.
-
-Maps can be implemented with the theory of arrays. An array is an entity that
-associates keys with values, and which has an equality predicate.
-The implementation of union, intersection, difference, and subset checks, however,
-need operations beyond the standard interface, and not all SMT solver can support
-them. In our implementation we used the \tc{map} operation of the
-Z3 SMT solver. The following snippet contains the implementation of
-\tc{intMapIsSubsetOf} in SMTLIB.
+On the syntax front, Liquid Haskell allows to link a Haskell type with a particular
+representation in the SMT solver.
 
 \begin{verbatim}
-; Similar to Maybe a
-(declare-datatype Option (par (a) (None (Some (someVal a)))))
+{-@ embed IntMap * as IntMapSetInt_t @-}
+\end{verbatim}
 
-; Similar to do {a0 <- oa0; a1 <- oa1; guard (a0 /= a1); pure a}
+Here we are indicating that \tc{IntMap b} must be represented as \tc{IntMapSetInt\_t}
+in the logic. \tc{IntMapSetInt\_t} is an alias for \tc{Array Int (Option (Set Int))}.
+An array is an entity that associates keys with values, and which has an equality predicate,
+and it is defined as one of the theories in SMT-LIB, the standard interface
+to SMT solvers~\cite{BarFT-RR-25}.
+The keys in this case are integers, and the values are either \tc{None} if the key
+is not in the map, or \tc{Some s} if the key maps to a set \tc{s}. We name the data type
+\tc{Option} to differentiated from Haskell's \tc{Maybe}, although both types are isomorphic.
+We do not name it the same because the framework to connect to the SMT solver is
+reused for other languages (e.g. \improvement{lehmann23}), and we prefer to keep
+the implementation free of language specific details.
+Here is the declaration of the \tc{Option} data type in SMT-LIB.
+
+\begin{verbatim}
+(declare-datatype Option (par (a) (None (Some (someVal a)))))
+\end{verbatim}
+
+We arranged for Liquid Haskell to include this declaration in the preamble of any
+queries to the SMT solver. The types \tc{Array}, \tc{Int}, and \tc{Set} are already
+known to the tooling.
+It doesn't matter what type \tc{b} is instantiated to, the \tc{embed} annotation will
+always set the same representation for \tc{IntMap b}, and this is a limitation that
+would need to be addressed to support maps properly.
+
+The array theory allows to describe how to retrieve the value associated with
+a key, and how to update the value. On the Haskell front, we link these operations
+to those of the \tc{IntMap b} type.
+
+\begin{verbatim}
+define IntMap.empty = (IntMapSetInt_default None)
+define IntMap.insert x y m = IntMapSetInt_store m x (Some y)
+define IntMap.lookup x m =
+  if (isSome (IntMapSetInt_select m x)) then
+    (GHC.Internal.Maybe.Just (someVal (IntMapSetInt_select m x)))
+  else
+    GHC.Internal.Maybe.Nothing
+\end{verbatim}
+
+The operations \tc{IntMapSetInt\_default}, \tc{IntMapSetInt\_store}, and \tc{IntMapSetInt\_select}
+are aliases that we implemented in Liquid Haskell to call to the array operations.
+In the case of \tc{lookup}, we translate the \tc{Option} type to Haskell's \tc{Maybe}.
+
+The implementation of union, intersection,
+difference, and subset checks for maps, however,
+need operations beyond the standard interface, and not all SMT solvers can support
+them. In our implementation we used the \tc{map} operation of the
+Z3 SMT solver. The following snippet contains the implementation of
+\tc{intMapIsSubsetOf} in SMT-LIB, and we also feed these declarations to the
+SMT solver in a preamble to the queries.
+
+\begin{verbatim}
+; Similar to do {a0 <- oa0; a1 <- oa1; guard (a0 /= a1); pure a0}
 (define-fun difference_strict_p2p
   ((oa0 (Option (Set Int)))
    (oa1 (Option (Set Int))))
@@ -1104,6 +1149,23 @@ Z3 SMT solver. The following snippet contains the implementation of
      ((_ map IntMapSetInt_difference_strict_p2p) xs ys)))
 \end{verbatim}
 
+Besides the limitation of the \tc{embed} annotation, another barrier for
+proper support is that old versions of SMT-LIB require user defined
+functions to have monomorphic types. This means, for instance, that
+the type of \tc{IntMapSetInt\_isSubsetOf} cannot be generalized to work
+on any \tc{IntMap}.
+
+While newer versions of the standard allow
+for polymorphic types, these still need to be implemented by SMT solvers.
+Until the implementations catch up with the standard, feeding operations with
+monomorphic types will require Liquid Haskell to be smart about generating
+these operations with the appropriate types, instead of putting them in a
+preamble once and for all queries.
+
+
+\subsection{Other limitations of Liquid Haskell}
+\label{limitations-of-liquid-haskell}
+
 The source code of our unification example lists various defects to fix
 in the user experience that required workarounds. A few of them seem to
 be about ill-resolved names when translating Haskell identifiers to the
@@ -1120,7 +1182,7 @@ look for the workarounds.
 
 On the bright
 side, none of the implementation issues that we have encountered in these
-examples will require answering open research question.
+examples will require answering open research questions.
 But for further insight on the challenges of using Liquid Haskell,
 Gamboa et al.~\cite{gamboa25} report on a study that collects the voices
 of its users.
