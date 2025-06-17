@@ -364,11 +364,9 @@ parameters of the problem evolve.
 We would
 like to argue that refinement types, like in Liquid Haskell, can server to
 reduce ingenuity in program design. The code presented in
-this section is available as
-\tc{Subst4.hs}\footnote{The simplest approach with Liquid Haskell:
-  \sourcefile{Subst4.hs}}\change{You'll need to replace this filename before you
-  submit.}
-in our repository.
+this section is available in the file
+\tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
+  \sourcefile{Subst1.hs}}
 
 We first define a type alias \tc{ScopeExp S}, that is the type of all
 expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
@@ -532,8 +530,7 @@ extension of the input. We also need to wrap our sets of names into a
 \tc{newtype} in order to hide the \tc{insert} operation from the programmer,
 otherwise she could accidentally omit using \tc{withRefreshed} to create
 new scope sets. This solution is available in the file
-\sourcefile{Subst2.hs}\critical{Make sure that this is the right file name in
-  when submitting}
+\tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
 
 % The second approach, avoid introducing \tc{withRefreshed} and modifying the
 % types in the program by providing a more stringent refinement type for
@@ -676,7 +673,8 @@ the Herbrand domain. This is the sort of unification problem which can show up
 when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
 and, in the authors' experience, something where any help from the compiler is welcome.
-The source code of this section can be found in \sourcefile{Unif.hs}.
+The source code of this section can be found in the file
+\tc{Unif.hs}.\footnote{Source code of unification: \sourcefile{Unif.hs}}
 
 In addition to variables, still represented as integers, we have unification
 variables. Unification variables have their own scope: the formula
@@ -1060,8 +1058,10 @@ In this section, we describe our modification to Liquid Haskell in order to addr
 this problem. While we can still use Liquid Haskell without these
 changes, we would lose in automation. The tooling would require a lot more
 lemmas from the user to check that the code handles the maps as expected.
-All our modifications can be found in \tc{ifl25-\allowbreak liquidhaskell.patch}
-and \sourcefile{ifl25-\allowbreak liquid-\allowbreak fix\-point.patch}.
+All our modifications can be found in the files \tc{ifl25-\allowbreak liquidhaskell.patch}
+and \tc{ifl25-\allowbreak liquid-\allowbreak fix\-point.patch}.\footnote{Patches for
+liquidhaskell and liquid-fixpoint: \sourcefile{ifl25-liquidhaskell.patch} and
+\sourcefile{ifl25-liquid-fixpoint.patch}}
 
 We modified Liquid Haskell to leverage the SMT solver to reason with the type
 \tc{IntMap (Set Int)}. These modifications can be easily adapted to
@@ -1234,14 +1234,15 @@ will try to use the universally quantified assertion. Unfortunately, the
 behavior of the procedures to find instantiations for quantified variables are
 not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
 
-On the performance front, all of the SMTLIB queries in the unification example run
-in 2 seconds, 0.5 seconds for \tc{Subst3.hs}, and 0.03 seconds in \tc{Subst4.hs}.
+On the performance front, all of the SMT-LIB queries in the unification example run
+in 6 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
 That is sometimes faster than it takes to compile the modules with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell, which spends several seconds checking the examples and interacting with the
-SMT solver (8 seconds checking unification, 2.5 seconds checking \tc{Subst3.hs},
-2 seconds checking \tc{Subst4.hs}). The authors deem that performance of Liquid Haskell
-can be improved but likely not below what the SMT solver can deliver.
+SMT solver (37 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
+1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
+can be improved to approach that of the SMT solver queries, and probably further by
+reducing the amount of queries.
 
 Other than using an SMT solver in the fashion of Liquid Haskell, F*~\cite{swamy16},
 Why3~\cite{filli13}, or Dafny~\cite{leino17},
