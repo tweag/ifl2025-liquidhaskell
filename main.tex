@@ -138,81 +138,6 @@ is a prototype implementation of a theory of finite maps for Liquid Haskell's
 solver, to support our case study, and which we discuss in
 Section~\ref{extending-liquid-haskell}.
 
-\paragraph{A Liquid Haskell primer}
-\change{We need to expunge this primer of scope-specific examples, and move
-those back in the narrative of Section 2. Clean all that up a bit.}
-Liquid Haskell is a
-plugin for Haskell. When given a program, Liquid Haskell
-checks statically that the functions in the program respect signatures
-provided by the programmer. There are two key differences between Liquid Haskell
-signature checking and a classical type checker:
-
-\begin{itemize}
-  \item The checking process consists in generating logical assumptions which
-        are then fed to an SMT solver, leveraging the powerful
-        capabilities of SMT solvers to reason about numbers, arrays, strings, etc…
-  \item Signatures are expressed with \emph{refinement types} of the form
-        \tc{\{x:b | p\}}, which denotes values of type
-        base type \tc{b} that satisfy predicate \tc{p}.
-        Refinements are subject to subtyping in the same way as subsets in set
-        theory, so that we have
-\begin{verbatim}
-{-@ f :: {x:Int | x > 1} -> {x:Int | x > 0} @-}
-f :: Int -> Int
-f x = x
-\end{verbatim}
-\end{itemize}
-
-Liquid Haskell reads refinement type signatures and other annotations from
-inside such special Haskell comments
-\tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when it is unambiguous.
-
-Liquid Haskell lets us express refinement types which relate arguments with each
-other, and with the result. This will let us relate the variables and scope sets
-of the rapier. For example, the \tc{freshVar} function can be given this signature
-
-\begin{verbatim}
-import Data.Set
-{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
-\end{verbatim}
-\improvement{This doesn't have to be an assumption. It could also be proved,
-  presumably. Based on the signatures for lookupMax and such. Maybe there's an
-  interesting element to discuss about this: when ensuring invariants with sealed
-  types, the correctness of every single function is assumed. With liquid type
-  you have a choice: you can either assume it, or check it. Both choices are
-  reasonable and depend on the circumstance.}
-
-The predicates in the refinement types are in a language of expressions
-referred to as the logic language. For the sake of this paper, we can
-regard it as a subset of Haskell. Predicates are assembled both from
-regular Haskell functions and functions that are
-only available in the logic language.\improvement{We should add an example of
-  declaring an uninterpreted predicate near here}
-A function like \tc{member}, which comes from the module \tc{Data.Set}
-in the \tc{containers} package, is linked by Liquid Haskell to the
-SMT solver's theory of sets.
-
-Refinement type signatures starting with the \tc{assume} keyword declare that the
-corresponding Haskell function should honor the signature, but it isn't
-checked. When \tc{freshVar} is called in other functions, Liquid Haskell
-will assume that the returned variable is fresh whatever the implementation
-of \tc{freshVar} does. In contrast, Liquid Haskell is going to check that
-the rapier implementation of Figure~\ref{rapier-style-substitution} meets the
-following refinement type signature of \tc{substitute}.
-
-\begin{verbatim}
-{-@
-type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S}
-
-substitute
-  :: scope:Set Int
-  -> s:Subst (ScopedExp scope)
-  -> ScopedExp (domain s)
-  -> ScopedExp scope
-@-}
-substitute :: Set Int -> Subst Exp -> Exp -> Exp
-\end{verbatim}
-
 \section{Capture-avoiding substitutions}
 \label{capture-avoiding-substitution}
 
@@ -368,6 +293,81 @@ this section is available in the file
 \tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
   \sourcefile{Subst1.hs}}
 
+\paragraph{A Liquid Haskell primer}
+Liquid Haskell is a
+plugin for Haskell. When given a program, Liquid Haskell
+checks statically that the functions in the program respect signatures
+provided by the programmer. There are two key differences between Liquid Haskell
+signature checking and a classical type checker:
+
+\begin{itemize}
+  \item The checking process consists in generating logical assumptions which
+        are then fed to an SMT solver, leveraging the powerful
+        capabilities of SMT solvers to reason about numbers, arrays, strings, etc…
+  \item Signatures are expressed with \emph{refinement types} of the form
+        \tc{\{x:b | p\}}, which denotes values of type
+        base type \tc{b} that satisfy predicate \tc{p}.
+        Refinements are subject to subtyping in the same way as subsets in set
+        theory, so that we have
+\begin{verbatim}
+{-@ f :: {x:Int | x > 1} -> {x:Int | x > 0} @-}
+f :: Int -> Int
+f x = x
+\end{verbatim}
+\end{itemize}
+
+Liquid Haskell reads refinement type signatures and other annotations from
+inside such special Haskell comments
+\tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when it is unambiguous.
+
+Liquid Haskell lets us express refinement types which relate arguments with each
+other, and with the result. This will let us relate the variables and scope sets
+of the rapier. For example, the \tc{freshVar} function can be given this signature
+
+\begin{verbatim}
+import Data.Set
+{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
+\end{verbatim}
+\improvement{This doesn't have to be an assumption. It could also be proved,
+  presumably. Based on the signatures for lookupMax and such. Maybe there's an
+  interesting element to discuss about this: when ensuring invariants with sealed
+  types, the correctness of every single function is assumed. With liquid type
+  you have a choice: you can either assume it, or check it. Both choices are
+  reasonable and depend on the circumstance.}
+
+The predicates in the refinement types are in a language of expressions
+referred to as the logic language. For the sake of this paper, we can
+regard it as a subset of Haskell. Predicates are assembled both from
+regular Haskell functions and functions that are
+only available in the logic language.
+A function like \tc{member}, which comes from the module \tc{Data.Set}
+in the \tc{containers} package, is linked by Liquid Haskell to the
+SMT solver's theory of sets.
+
+Refinement type signatures starting with the \tc{assume} keyword declare that the
+corresponding Haskell function should honor the signature, but it isn't
+checked. When \tc{freshVar} is called in other functions, Liquid Haskell
+will assume that the returned variable is fresh whatever the implementation
+of \tc{freshVar} does. In contrast, Liquid Haskell is going to check that
+the rapier implementation of Figure~\ref{rapier-style-substitution} meets the
+following refinement type signature of \tc{substitute}.
+
+\begin{verbatim}
+{-@
+type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S}
+
+substitute
+  :: scope:Set Int
+  -> s:Subst (ScopedExp scope)
+  -> ScopedExp (domain s)
+  -> ScopedExp scope
+@-}
+substitute :: Set Int -> Subst Exp -> Exp -> Exp
+\end{verbatim}
+\change{I'm running out of steam, but we want to remove the example from the
+  substitution from the primer part. We probably want to move the primer to the
+  introduction honestly.}
+\paragraph{Scoped expressions}
 We first define a type alias \tc{ScopeExp S}, that is the type of all
 expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
 Liquid Haskell expects parameter names to start with an uppercase letter.}.
