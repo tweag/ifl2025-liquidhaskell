@@ -423,14 +423,7 @@ substitution, we could simply prove these lemmas, but using axioms makes sure
 that our case studies don't depend on a particular choice of representation for
 substitutions.
 
-This concludes our scope-management toolbox. We needed to implement the
-\tc{freeVars} function, provide the \tc{ScopedExp} refined type, and the three
-primitives to axiomatize substitution. All the other supporting functions can be
-defined in user land. Contrast with an abstract-type based approach where a lot
-primitives must be provided by the abstract interface. The foil, in particular,
-need several types and type classes, and a wealth of primitive functions.
-
-With these tools, we can give the following signature to \tc{substitute}
+We can give now the following signature to \tc{substitute}
 \begin{verbatim}
 {-@
 substitute
@@ -636,6 +629,12 @@ new scope sets. This solution is available in the file
 
 
 \subsection{Comparison}
+
+When using Liquid Haskell we needed to implement the
+\tc{freeVars} function, provide the \tc{ScopedExp} refined type, and the refinement
+type signatures of the substitution primitives. Contrast with an abstract-type based
+approach where a lot primitives must be provided by the abstract interface. The foil,
+in particular, needs several types, type classes, and primitive functions.
 
 \unsure{[Arnaud] I'm not sure yet whether I prefer this subsection to be here,
   or together with the evaluation section.}
