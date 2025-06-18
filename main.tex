@@ -275,25 +275,19 @@ withFresh
   -> r
 \end{verbatim}
 
-\subsection{The rapier, refined}
-\label{the-rapier-with-refinement-types}
-
 With ingenious engineering and design, the foil meets its rather ambitious goal.
-\unsureF{Not all of it, they missed the last requirement. I miss a summary at the
-end of the previous section making explicit what the foil achieved.}
+\unsureF{They left to the unsafe part the bit to update the
+substitution when the binder is not in the scope set. We might want to mention this later when comparing with LH}
 But it's unfortunate that the authors needed to be ingenious. All things equal,
 we prefer program components to be straightforward. Because ingenious solutions
 take time, and because straightforward solutions are easier to adapt when the
 parameters of the problem evolve.
+We would like to argue next that refinement types, like in Liquid Haskell, can
+serve to reduce ingenuity in program design.
 
-We would
-like to argue that refinement types, like in Liquid Haskell, can server to
-reduce ingenuity in program design. The code presented in
-this section is available in the file
-\tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
-  \sourcefile{Subst1.hs}}
 
-\paragraph{A Liquid Haskell primer}
+\subsection{A Liquid Haskell primer}
+
 Liquid Haskell is a
 plugin for Haskell. When given a program, Liquid Haskell
 checks statically that the functions in the program respect signatures
@@ -348,31 +342,28 @@ Refinement type signatures starting with the \tc{assume} keyword declare that th
 corresponding Haskell function should honor the signature, but it isn't
 checked. When \tc{freshVar} is called in other functions, Liquid Haskell
 will assume that the returned variable is fresh whatever the implementation
-of \tc{freshVar} does. In contrast, Liquid Haskell is going to check that
-the rapier implementation of Figure~\ref{rapier-style-substitution} meets the
-following refinement type signature of \tc{substitute}.
+of \tc{freshVar} does. Removing the \tc{assume} keyword, on the other hand,
+will have Liquid Haskell produce an error if it cannot check that
+\tc{freshVar} behaves as advertised.
 
-\begin{verbatim}
-{-@
-type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S}
 
-substitute
-  :: scope:Set Int
-  -> s:Subst (ScopedExp scope)
-  -> ScopedExp (domain s)
-  -> ScopedExp scope
-@-}
-substitute :: Set Int -> Subst Exp -> Exp -> Exp
-\end{verbatim}
-\change{I'm running out of steam, but we want to remove the example from the
-  substitution from the primer part. We probably want to move the primer to the
-  introduction honestly.}
-\paragraph{Scoped expressions}
-We first define a type alias \tc{ScopeExp S}, that is the type of all
+\subsection{The rapier, refined}
+\label{the-rapier-with-refinement-types}
+
+In this section we show how Liquid Haskell allows to introduce the needed
+static checks for the rapier. And we hope, in a way that does not require
+subtle or deep considerations. The code presented in this section is available in the file
+\tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
+  \sourcefile{Subst1.hs}}
+
+In order to deal with scope checks, we first define a type alias \tc{ScopeExp S},
+that is the type of all
 expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
 Liquid Haskell expects parameter names to start with an uppercase letter.}.
-Then we provide a type signature for the function \tc{substitute} using
-refinement types.
+
+\begin{verbatim}
+{-@ type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S} @-}
+\end{verbatim}
 
 Functions like \tc{isSubsetOf} and \tc{difference} come from the \tc{Data.\allowbreak Set}
 module. The function \tc{freeVars} is in the same module as \tc{subs\-ti\-tute},
@@ -388,7 +379,14 @@ freeVars e = case e of
   Lam i e -> difference (freeVars e) (singleton i)
 \end{verbatim}
 
-Lastly, there is the function \tc{domain} defined solely within the logic
+We assume that we have some implementation of substitutions as maps of
+variables to terms, although we don't require any particular implementation.
+
+\begin{verbatim}
+data Subst t -- opaque
+\end{verbatim}
+
+Substitutions have a function \tc{domain}, that we define solely within the logic
 language.
 
 \begin{verbatim}
@@ -401,8 +399,8 @@ an uninterpreted symbol, it doesn't have a definition beyond its type signature.
 The meaning of \tc{domain} is given by the refinement type signatures in which
 \tc{domain} appears:\unsure{Something we should be part of the discussion
   section at the end of the article, I think, is how do you actually instantiate
-  these axioms with an concrete substitution type? Answer: you copy the assumptions
-  to address whatever substitution representation is needed.}
+  these axioms with an concrete substitution type? Answer: Sounds good, you copy
+  the assumptions to address whatever substitution representation is needed.}
 
 \begin{verbatim}
 assume lookupSubst
