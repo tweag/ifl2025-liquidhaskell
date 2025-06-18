@@ -276,9 +276,7 @@ withFresh
 \end{verbatim}
 
 With ingenious engineering and design, the foil meets its rather ambitious goal.
-\unsureF{They left to the unsafe part the bit to update the
-substitution when the binder is not in the scope set. We might want to mention this later when comparing with LH}
-But it's unfortunate that the authors needed to be ingenious. All things equal,
+But it is unfortunate that the authors needed to be ingenious. All things equal,
 we prefer program components to be straightforward. Because ingenious solutions
 take time, and because straightforward solutions are easier to adapt when the
 parameters of the problem evolve.
@@ -630,6 +628,9 @@ When using Liquid Haskell we needed to implement the
 type signatures of the substitution primitives. Contrast with an abstract-type based
 approach where a lot primitives must be provided by the abstract interface. The foil,
 in particular, needs several types, type classes, and primitive functions.
+\unsureF{Shall we discuss here that LH is checking a slightly different set of properties?
+We don't check property (2), but we do check that non-renamed binders are removed from
+the domain of the substitution, which the foil leaves to the trusted code.}
 
 \unsure{[Arnaud] I'm not sure yet whether I prefer this subsection to be here,
   or together with the evaluation section.}
