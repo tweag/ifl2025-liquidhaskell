@@ -450,24 +450,25 @@ naked terms.\unsure{I'm considering adding a comment on the fact that we can use
   variable to itself. And we do the same in our unification code. The substitution
   domain can be narrowed if desired, but starting with the identity doesn't affect
   the static checks.}
-\unsureF{I'm also missing a summary here of what our annotations have achieved. It
-should be noted in particular, that this doesn't address requirement (2) which
-motivates the discussion in the next subsection.}
+
+Our refinement type signature of \tc{substitute} follows the type signature of
+\citeauthor{maclaurin23} to the letter. Though it addresses almost all of the
+properties from Section~\ref{the-rapier-with-stronger-types}, it still misses
+Property~(\ref{req:always-rename}), which we discuss next.
 
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
 
-Using the signature above, however, isn't quite error-proof: it does not enforce
-Requirement~(\ref{req:always-rename}) from
-Section~\ref{the-rapier-with-stronger-types}.
-So we could change the penultimate case of \tc{substitute} from
-Figure~\ref{rapier-style-substitution} to
+We can introduce the following bug in \tc{substitute} from
+Figure~\ref{rapier-style-substitution}, and Liquid Haskell, will
+be blind to it with the refinement type signature that we provided.
 \begin{verbatim}
+  ...
   | member i scope ->
       Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
 \end{verbatim}
-and it will still typecheck. So that
-(in pseudo-Haskell)
+Liquid Haskell flags no errors but the program will still misbehave as
+follows (in pseudo-Haskell).
 
 $$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$$
 
