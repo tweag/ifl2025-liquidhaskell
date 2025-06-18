@@ -472,13 +472,13 @@ follows (in pseudo-Haskell).
 
 $$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$$
 
-Which is certainly not what we want. So what's going on? And how can we address
-it? The signature is, in fact, indifferent to whether the binder \tc{i}
-is already present or not in the scope set. There's not mechanism to prevent
-adding a binder that is already present in the scope set. And, more to the
-point, how could there be? “Never add a binder to the scope set that is already
+So what gives? The binder \tc{i} is now capturing free variables in the
+range of the substitution. The signature is, in fact, indifferent to whether
+the binder \tc{i} is already present or not in the scope set. There's not
+mechanism to prevent adding a binder that is already present in the scope set.
+And, more to the point, how could there be? “Never add a binder to the scope set that is already
 present” isn't a set theoretical property. It's not even a functional property.
-It's a kind of temporal invariant.
+It is a kind of temporal invariant.
 
 Such temporal invariants aren't naturally expressed in the logic of Liquid Haskell.
 But they're quite easy to implement with abstract types. So let's use an abstract
@@ -490,16 +490,15 @@ We follow the foil (see Section~\ref{the-rapier-with-stronger-types}) and
 introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}. \improvement{Add member in the code snippet} The types are a little
 simpler because we don't need existential quantification to reflect value-level
 objects at the type level, but otherwise these are the same functions and types
-as in Section~\ref{the-rapier-with-stronger-types}.\unsure{Maybe we need to
-  redesign this code snippet for an abstract member function. We need to discuss
-  this}
-
+as in Section~\ref{the-rapier-with-stronger-types}.
 \begin{verbatim}
-newtype Scope = UnsafeScope (Set Int)
+newtype Scope = UnsafeScope { unsafeUnScope :: (Set Int) }
 {-@
+predicate Member E S = Set.member E (unsafeUnScope S)
+
 withRefreshed :: s:Scope -> i:Int
   -> {p:(Scope, Int) |
-       not (member (snd p) s) && fst p == union s (singleton (snd p))}
+       not (Member (snd p) s) && fst p == union s (singleton (snd p))}
 @-}
 withRefreshed :: Scope -> Int -> (Scope, Int)
 withRefreshed (UnsafeScope s) i
@@ -514,15 +513,10 @@ fresh variable call: the variable returned by \tc{withRefreshed} isn't in the
 old scope but is in the new scope.
 
 It then suffices to seal the type \tc{Scope} to enforce that binders are always
-refreshed when traversed. The full code for this example can be found in the
-
-The refinement type signature of the function captures the fact that the returned
-name is not in the input set \tc{s}, and that the returned set is an
-extension of the input. We also need to wrap our sets of names into a
-\tc{newtype} in order to hide the \tc{insert} operation from the programmer,
-otherwise she could accidentally omit using \tc{withRefreshed} to create
-new scope sets. This solution is available in the file
-\tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
+refreshed when traversed.\change{Here we need a discussion of what sealing means,
+which could be the place to discuss the need for the Member predicate alias as well.}
+The full code for this example can be found in the
+file \tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
 
 % The second approach, avoid introducing \tc{withRefreshed} and modifying the
 % types in the program by providing a more stringent refinement type for
