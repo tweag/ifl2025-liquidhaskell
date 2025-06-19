@@ -283,7 +283,7 @@ parameters of the problem evolve.
 We will turn next to Liquid Haskell as our proposed solution, but first let us
 introduce Liquid Haskell briefly.
 Liquid Haskell is a
-plugin for Haskell which statically check that programs respect signatures
+plugin for Haskell which statically checks that programs respect signatures
 provided by the programmer. There are two key differences between Liquid Haskell
 signature checking and a classical type checker:
 
@@ -394,12 +394,12 @@ Figure~\ref{rapier-style-substitution}:
 {-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
 \end{verbatim}
 This signature is assumed rather than checked. We could choose to check it, but
-Liquid Haskell doesn't have a good built-in understanding of the \tc{maxElement}
+Liquid Haskell doesn't have a good built-in understanding of the \tc{lookupMax}
 function that we use. So instead, we choose to assume the signature. This is our
 first principle of programming with refinement types:
 
 \begin{principle}
-  Refinement type permit much smaller trusted code base than
+  Refinement types permit a smaller trusted code base than
   abstract types, but offer you a choice. When its easier to prove a result by
   hand than with the SMT solver, you should assume the property.
 \end{principle}
@@ -456,11 +456,11 @@ boilerplate than a type-based approach.
 
 Figure~\ref{rapier-style-substitution} uses that a substitution
 \begin{verbatim}
-s :: Substitution (ScopedExp scope)
+s :: Subst (ScopedExp scope)
 \end{verbatim}
 also has (refined) type
 \begin{verbatim}
-s :: Substitution (ScopedExp (insert i scope))
+s :: Subst (ScopedExp (insert i scope))
 \end{verbatim}
 This kind of subtyping is trivial with refinement types, it's the default
 behavior. Whereas with an ML type system, subtyping isn't a typical feature. The
@@ -875,7 +875,7 @@ introduced with universal quantification, and that can appear free in the
 input formula. The set \tc{se} in the monadic state contains the variables
 that have been introduced with existential quantification \tc{se}.
 
-We expect the set \tc{sf} to be a subset of \tc{se}. This is two reflect the
+We expect the set \tc{sf} to be a subset of \tc{se}. This is to reflect the
 fact that we don't want unification variables to be called the same as
 universally quantified variables. It is not a strict requirement, but one
 that makes the output of \tc{skolemize} considerably easier to read.
