@@ -85,6 +85,7 @@
 
 \begin{document}
 \begin{abstract}
+    \change{Remember to make a pass on this abstract before submission}
     This paper explores the use of Satisfiability Modulo Theories (SMT) solvers,
     specifically through Liquid Haskell, to enhance static checks of
     programming language interfaces. Traditional approaches in strongly typed
@@ -249,8 +250,7 @@ free variables in a superset (\tc{Exp l}), and to introduce scope sets that exte
 others with freshly created names. They also provide an implementation of maps of
 variables to expressions, that is the substitutions to apply, with an interface
 that uses the new types as well. There is for instance the following function to
-produce fresh variables:\unsure{can we name some of these mechanisms, for
-  reference? \emph{e.g.} “that no name shadows one another (Distinct)”}
+produce fresh variables:
 
 \begin{verbatim}
 withRefreshed
@@ -280,15 +280,14 @@ But it is unfortunate that the authors needed to be ingenious. All things equal,
 we prefer program components to be straightforward. Because ingenious solutions
 take time, and because straightforward solutions are easier to adapt when the
 parameters of the problem evolve.
-We would like to argue next that refinement types, like in Liquid Haskell, can
-serve to reduce ingenuity in program design.
 
 
 \subsection{A Liquid Haskell primer}
 
+We will turn next to Liquid Haskell as our proposed solution, but first let us
+introduce Liquid Haskell briefly.
 Liquid Haskell is a
-plugin for Haskell. When given a program, Liquid Haskell
-checks statically that the functions in the program respect signatures
+plugin for Haskell which statically check that programs respect signatures
 provided by the programmer. There are two key differences between Liquid Haskell
 signature checking and a classical type checker:
 
@@ -312,45 +311,61 @@ Liquid Haskell reads refinement type signatures and other annotations from
 inside such special Haskell comments
 \tc{\{-@ \ldots\ @-\}}. We will skip them in our snippets when it is unambiguous.
 
-Liquid Haskell lets us express refinement types which relate arguments with each
-other, and with the result. This will let us relate the variables and scope sets
-of the rapier. For example, the \tc{freshVar} function can be given this signature
-
-\begin{verbatim}
-import Data.Set
-{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
-\end{verbatim}
-\improvement{This doesn't have to be an assumption. It could also be proved,
-  presumably. Based on the signatures for lookupMax and such. Maybe there's an
-  interesting element to discuss about this: when ensuring invariants with sealed
-  types, the correctness of every single function is assumed. With liquid type
-  you have a choice: you can either assume it, or check it. Both choices are
-  reasonable and depend on the circumstance.}
-
 The predicates in the refinement types are in a language of expressions
 referred to as the logic language. For the sake of this paper, we can
-regard it as a subset of Haskell. Predicates are assembled both from
+regard it as a subset of Haskell, except that predicates are assembled both from
 regular Haskell functions and functions that are
 only available in the logic language.
+
 A function like \tc{member}, which comes from the module \tc{Data.Set}
 in the \tc{containers} package, is linked by Liquid Haskell to the
 SMT solver's theory of sets.
-
+\begin{verbatim}
+import Data.Set
+assume member :: Ord a
+              => x:a -> xs:(Set a) -> {v:Bool | v <=> Set_mem x xs}
+\end{verbatim}
 Refinement type signatures starting with the \tc{assume} keyword declare that the
-corresponding Haskell function should honor the signature, but it isn't
-checked. When \tc{freshVar} is called in other functions, Liquid Haskell
-will assume that the returned variable is fresh whatever the implementation
-of \tc{freshVar} does. Removing the \tc{assume} keyword, on the other hand,
-will have Liquid Haskell produce an error if it cannot check that
-\tc{freshVar} behaves as advertised.
+corresponding Haskell function honors the signature, but it isn't
+checked. In this case it's because \tc{Data.Set} is an external dependency that
+Liquid Haskell can't check. But it can also be applied to our own functions.
 
+Here \tc{Set\_mem} is a special function that Liquid Haskell maps to the theory
+of sets in the SMT solver.\unsure{I hope I'm not lying here. Please factcheck
+  me.} While that \tc{member} verifies this signature isn't checked, Liquid
+Haskell will assume this property whenever \tc{member} is used in a program.
+That is Liquid Haskell will know that \tc{member} is Haskell's implementation of
+set membership.
+
+Notice how the predicate on the return type mentions both arguments. Liquid
+Haskell lets us express refinement types which relate arguments with each other,
+and with the result in this manner. This obviates the need, in particular, to
+give a type-level name to arguments using existential quantification.
+
+To define purely logic function, Liquid Haskell uses the \tc{measure} keyword,
+such as:\improvement{Unfortunately, I couldn't think of a measure from the
+  Liquid Haskell standard library that we use. So I resorted to take a random
+  one from Set instead (which is also the only one from Set).}
+\begin{verbatim}
+measure listElts :: [a] -> Set a
+  listElts []     = {v | (Set_emp v)}
+  listElts (x:xs) = {v | v = Set_cup (Set_sng x) (listElts xs) }
+\end{verbatim}
+
+It is also possible to define uninterpreted symbols by simply omitting the
+definition. It would look like this
+\begin{verbatim}
+measure listElts :: [a] -> Set a
+\end{verbatim}
+The meaning of the function would then be given by \tc{assume} refinement
+signature on other functions.
 
 \subsection{The rapier, refined}
 \label{the-rapier-with-refinement-types}
 
-In this section we show how Liquid Haskell allows to introduce the needed
-static checks for the rapier. And we hope, in a way that does not require
-subtle or deep considerations. The code presented in this section is available in the file
+We would, now, like to argue that using Liquid Haskell to enforce the
+requirements from Section~\ref{the-rapier-with-stronger-types} is more
+straightforward than using the type system. The code presented in this section is available in the file
 \tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
   \sourcefile{Subst1.hs}}
 
@@ -377,30 +392,36 @@ freeVars e = case e of
   Lam i e -> difference (freeVars e) (singleton i)
 \end{verbatim}
 
-We assume that we have some implementation of substitutions as maps of
-variables to terms, although we don't require any particular implementation.
+Next, we need to give the following refined signature to the \tc{freshVar} of
+Figure~\ref{rapier-style-substitution}:
+\begin{verbatim}
+{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
+\end{verbatim}
+This signature is assumed rather than checked. We could choose to check it, but
+Liquid Haskell doesn't have a good built-in understanding of the \tc{maxElement}
+function that we use. So instead, we choose to assume the signature. This is our
+first principle of programming with refinement types:
+
+\begin{principle}
+  Refinement type permit much smaller trusted code base than
+  abstract types, but offer you a choice. When its easier to prove a result by
+  hand than with the SMT solver, you should assume the property.
+\end{principle}
+
+That's it, this is the entirety of our trusted code base for this example. For
+the most part, it required thinking about what properties we wanted to enforce,
+but not much about how they ought to be enforced.
+
+Finally, we assume that we have some datatype representing substitutions
+(\emph{i.e.} finite maps of variables to terms), although we don't require any
+particular implementation: this datatype is a parameter of our algorithm. To
+that effect we assume an opaque data type and axiomatize its supporting
+functions.
 
 \begin{verbatim}
 data Subst t -- opaque
-\end{verbatim}
-
-Substitutions have a function \tc{domain}, that we define solely within the logic
-language.
-
-\begin{verbatim}
 {-@ measure domain :: Subst e -> Set Int @-}
-\end{verbatim}
 
-This is how purely logic functions are declared. The function \tc{domain} stands
-for the set of variables in the domain of a substitution. However \tc{domain} is
-an uninterpreted symbol, it doesn't have a definition beyond its type signature.
-The meaning of \tc{domain} is given by the refinement type signatures in which
-\tc{domain} appears:\unsure{Something we should be part of the discussion
-  section at the end of the article, I think, is how do you actually instantiate
-  these axioms with an concrete substitution type? Answer: Sounds good, you copy
-  the assumptions to address whatever substitution representation is needed.}
-
-\begin{verbatim}
 assume lookupSubst
   :: k:Int
   -> xs:Subst e
@@ -413,13 +434,12 @@ assume extendSubst
   -> {v:_ | union (domain s) (singleton i) = domain v }
 \end{verbatim}
 
-With these signatures, whenever Liquid Haskell encounters an application of the
-function \tc{lookupSubst}, it will assume that the key is in the domain of the
-substitution if the lookup succeeds. Together \tc{domain}, \tc{lookupSubst}, and
-\tc{extendSubst} axiomatizes our substitutions. We don't need to axiomatize
-substitution, we could simply prove these lemmas, but using axioms makes sure
-that our case studies don't depend on a particular choice of representation for
-substitutions.
+Notice that the logical function \tc{domain}, which stands for the set of
+variables that the substitution defines, is uninterpreted. It must be since it's an
+assumption.\unsure{Something which could be part of the discussion
+  section at the end of the article, I think, is how do you actually instantiate
+  these axioms with an concrete substitution type? Answer: Sounds good, you copy
+  the assumptions to address whatever substitution representation is needed.}
 
 We can give now the following signature to \tc{substitute}
 \begin{verbatim}
@@ -435,8 +455,26 @@ substitute :: Set Int -> Subst Exp -> Exp -> Exp
 Remarkably, the implementation for \tc{substitute} is unchanged from the
 implementation, without static scope checking, of
 Figure~\ref{rapier-style-substitution}. This won't always be the case, but this
-exemplifies how using Liquid Haskell to enforce invariants tends to great less
+exemplifies how using Liquid Haskell to enforce invariants tends to create less
 boilerplate than a type-based approach.
+
+Figure~\ref{rapier-style-substitution} uses that a substitution
+\begin{verbatim}
+s :: Substitution (ScopedExp scope)
+\end{verbatim}
+also has (refined) type
+\begin{verbatim}
+s :: Substitution (ScopedExp (insert i scope))
+\end{verbatim}
+This kind of subtyping is trivial with refinement types, it's the default
+behavior. Whereas with an ML type system, subtyping isn't a typical feature. The
+foil, for instance, needs an explicit function to cast substitutions when
+extending a scope. This is our next principle:
+\begin{principle}
+  Refinement types add a layer of subtyping on top of your type system. When
+  your program is best modeled with subtyping you should consider refinement
+  types.
+\end{principle}
 
 The type of lambda terms is also unchanged, as the well-scoping invariant is
 applied to a whole term at once. A nice consequence of that is that functions
@@ -449,17 +487,13 @@ naked terms.\unsure{I'm considering adding a comment on the fact that we can use
   domain can be narrowed if desired, but starting with the identity doesn't affect
   the static checks.}
 
-Our refinement type signature of \tc{substitute} follows the type signature of
-\citeauthor{maclaurin23} to the letter. Though it addresses almost all of the
-properties from Section~\ref{the-rapier-with-stronger-types}, it still misses
-Property~(\ref{req:always-rename}), which we discuss next.
-
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
 
-We can introduce the following bug in \tc{substitute} from
-Figure~\ref{rapier-style-substitution}, and Liquid Haskell, will
-be blind to it with the refinement type signature that we provided.
+Our refinement type signature of \tc{substitute} follows the type signature of
+\citeauthor{maclaurin23} to the letter.
+Yet we can introduce the following bug in \tc{substitute} from
+Figure~\ref{rapier-style-substitution}:
 \begin{verbatim}
   ...
   | member i scope ->
@@ -470,11 +504,12 @@ follows (in pseudo-Haskell).
 
 $$\codeblocksize{\tc{substitute}~\{\tc{x}\}~(\lambda{}\tc{x}. \tc{y}) [\tc{y}:=\tc{x}] = (\lambda{}\tc{x}. \tc{x})}$$
 
-So what gives? The binder \tc{i} is now capturing free variables in the
+What is going on? The binder \tc{i} is now capturing free variables in the
 range of the substitution. The signature is, in fact, indifferent to whether
-the binder \tc{i} is already present or not in the scope set. There's not
+the binder \tc{i} is already present or not in the scope set. There's no
 mechanism to prevent adding a binder that is already present in the scope set.
-And, more to the point, how could there be? “Never add a binder to the scope set that is already
+That is, we fail to enforce Property~(\ref{req:always-rename}) from Section~\ref{the-rapier-with-stronger-types}.
+And, more to the point, how could we? “Never add a binder to the scope set that is already
 present” isn't a set theoretical property. It's not even a functional property.
 It is a kind of temporal invariant.
 
@@ -484,8 +519,8 @@ type. What we need to do is to ensure that whenever we see a new binder it must
 be tested against the scope, and that this test is packaged together with fresh
 name generation.
 
-We follow the foil (see Section~\ref{the-rapier-with-stronger-types}) and
-introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}. \improvement{Add member in the code snippet} The types are a little
+We follow the foil and
+introduce an abstract type \tc{Scope} and a function \tc{withRefreshed}. The types are a little
 simpler because we don't need existential quantification to reflect value-level
 objects at the type level, but otherwise these are the same functions and types
 as in Section~\ref{the-rapier-with-stronger-types}.
@@ -515,6 +550,13 @@ refreshed when traversed.\change{Here we need a discussion of what sealing means
 which could be the place to discuss the need for the Member predicate alias as well.}
 The full code for this example can be found in the
 file \tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
+
+This is our next principle for refinement types:
+\begin{principle}
+  Refinement types and abstract types are best at enforcing different kind of
+  properties. You should user the simpler solution for each property that you
+  need, as refinement types and abstract types mix well.
+\end{principle}
 
 % The second approach, avoid introducing \tc{withRefreshed} and modifying the
 % types in the program by providing a more stringent refinement type for
@@ -661,7 +703,7 @@ We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-c
 
 Now that we have established the refined rapier interface, let us show how it
 can be applied to a more realistic example: solving first-order equational
-formulas. Specifically, we'll be solving a form of hereditary Harrop formulas in
+formulas. Specifically, we'll be solving a form of hereditary Harrop formulas~\cite{miller91} in
 the Herbrand domain. This is the sort of unification problem which can show up
 when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
@@ -1522,4 +1564,8 @@ candidate to impact programming practice in the future.
 \bibliography{references}
 \end{document}
 
-% LocalWords:  invariants axiomatizes axiomatize
+% LocalWords:  invariants axiomatizes axiomatize integrations SMT subtyping
+
+% Local Variables:
+% ispell-local-dictionary: "american"
+% End:
