@@ -331,7 +331,12 @@ of sets in the SMT solver.\unsure{I hope I'm not lying here. Please factcheck
   me.} While that \tc{member} verifies this signature isn't checked, Liquid
 Haskell will assume this property whenever \tc{member} is used in a program.
 That is Liquid Haskell will know that \tc{member} is Haskell's implementation of
-set membership.
+set membership.\change{member is not too simple an example because it has two dimensions.
+On the one hand, there is the assumed refinement type, which is used to prove
+properties about code that uses member. On the other hand, there is the
+\tc{define} annotation, that is used when translating functions that use member to the
+logic. I feel the statement that LH links \tc{member} and \tc{Set\_mem} is only partly
+true if you only have the assumed signature.}
 
 Notice how the predicate on the return type mentions both arguments. Liquid
 Haskell lets us express refinement types which relate arguments with each other,
@@ -401,12 +406,18 @@ first principle of programming with refinement types:
 \begin{principle}
   Refinement types permit a smaller trusted code base than
   abstract types, but offer you a choice. When its easier to prove a result by
-  hand than with the SMT solver, you should assume the property.
+    hand than with the SMT solver, you should assume the property.\improvement{I feel
+    this principle needs a discussion of unsafe coercions. Are unsafe coercions the
+    way to assume properties with abstract types? Then they also offer a choice as
+    Liquid Haskell does. If unsafe coercions aren't such a good choice, why not?}
 \end{principle}
 
 That's it, this is the entirety of our trusted code base for this example. For
 the most part, it required thinking about what properties we wanted to enforce,
-but not much about how they ought to be enforced.
+but not much about how they ought to be enforced.\change{Aren't \tc{lookupSubst}
+and \tc{extendSubst} part of our trusted code base too? If they aren't, I think
+it would need to be explained. If they are, this account of the trusted code base
+should be moved further below.}
 
 Finally, we assume that we have some datatype representing substitutions
 (\emph{i.e.} finite maps of variables to terms), although we don't require any
@@ -949,7 +960,7 @@ which  don't require the burden of explaining the mechanisms for
 checking monadic code. But we do note that all the cases of the function
 \tc{skolemize} are checked as it appears in Figure~\ref{skolemization},
 except for the case of existential quantifiers which cause Liquid Haskell
-to hang at the moment.\unsureF{Such a terrible ending for a great section. I think I'll try to determine who's hanging at least}
+to hang at the moment.\unsureF{Such a terrible ending for a great section. It is the SMT solver that seems to be hanging on some query.}
 
 
 \subsection{Checking \tc{unifyEq}}
