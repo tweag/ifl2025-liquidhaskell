@@ -1570,10 +1570,9 @@ a fine demonstration about the foil.
 Perhaps one of the biggest compromises when encoding properties in the type-checker
 is that one needs to narrow the expressible properties to a feasible set that allows
 to write a supporting library. If we wanted to have static checks like those of the
-unification example, ensuring that the return terms satisfy the scope check and the
-occurs check would require new type encodings. Or in other words, new type indices
-need to be conceived to relate the parameters of the function \tc{unify}.
-$$\mathit{unify} :: \mathit{Formula}\ f_1 \ldots f_n -> [(\mathit{Var}\ v_1 \ldots v_m, \mathit{Term}\ t_1 \ldots t_r)]$$
+unification example, we would need new type encodings. Or in other words, new type indices
+need to be conceived to relate the parameters of our functions.
+$$\mathit{skolemize} :: \mathit{Scope}\ s_1 \ldots s_n \rightarrow \mathit{Formula}\ f_1 \ldots f_j \rightarrow \mathit{State} t_1 \ldots t_k (\mathit{Scope}\ e_1 \ldots e_l) (\mathit{Formula}\ o_1 \ldots o_m)]$$
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
