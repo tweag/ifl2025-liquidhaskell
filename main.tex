@@ -964,6 +964,7 @@ to hang at the moment.\unsureF{Such a terrible ending for a great section. It is
 
 
 \subsection{Checking \tc{unifyEq}}
+\label{checking-unifyEq}
 
 We start introducing static checks by providing a refinement type signature to
 the function \tc{unifyEq}, which encodes the scope check, the occurs check,
@@ -1484,69 +1485,77 @@ insufficient to prove the goal? The user has to compute it on her own too,
 although it is plausible that counterexamples or better location information~\cite{webbers24}
 can be proposed by the tooling when the integration matures.
 
-As an example, let us consider the lemma \tc{lemma\-FreeVars\-Subst\-Union} discussed in
-Section~\ref{ensuring-the-scope-set-is-checked}.\change{We need to fish for a different lemma now that this section is removed.}
-If we drop this lemma from the definition of \tc{substitute}, we get the following
+As an example, let us consider the lemma \tc{lemmaSubstituteScopesTerm} discussed in
+Section~\ref{checking-unifyEq}.
+If we drop this lemma from the definition of \tc{unifyEq}, we get the following
 error message, heavily edited for presentation.
-
 \begin{verbatim}
-tests/rapier/Subst3.hs:141:7: error:
+tests/rapier/Unif.hs:570:7: error:
     Liquid Type Mismatch
     The inferred type
-      VV : {v : Exp | v == App ?b ?c
-                      && freeVars v == union (freeVars ?b) (freeVars ?c)}
+      VV : Term
     is not a subtype of the required type
-      VV : {VV : Exp | freeVars VV == freeVarsSubst (freeVars ?a) s}
+      VV : {VV : Term |
+               IntMapSetInt_isSubsetOf
+                 (scopesTerm VV)
+                 (IntMap.union (scopesTerm t0) (scopesTerm t1))}
     in the context
-      ?c : {?c : Exp | ?c == substitute scope s e1
-                       && freeVars ?c == freeVarsSubst (freeVars e1) s}
+      t1 : {t1 : Term |
+               consistentSkolemScopesTerm t1
+            && UnionCommutes (scopesTerm t0) (scopesTerm t1)}
 
-      ?b : {?b : Exp | ?c == substitute scope s e0
-                       && freeVars ?b == freeVarsSubst (freeVars e0) s}
+      s : {s : Subst Term |
+             isSubsetOf (freeVars (substitute s' t1)) (domain s)}
 
-      ?a : {?a : Exp | isSubset (freeVars ?a) (domain s)
-                       && ?a == App e0 e1
-                       && freeVars ?a == union (freeVars e0) (freeVars e1)}
+      t0 : {t0 : Term |
+               consistentSkolemScopesTerm t0 && t0 == SA (i, s)}
 
-      scope : Set Int
-      s : Subst Exp
-      e0 : Exp
-      e1 : Exp
-    Constraint id 33
+      s' : {s' : Subst Term |
+               Just s' == inverseSubst (narrowForInvertibility (freeVars t1) s)
+            && consistentSkolemScopesTerm (substitute s' t1)}
+
+      i : {i : Int | not (Set.member i (skolemSet (substitute s' t1)))}
+    Constraint id 3210
     |
-141 |       App (substitute scope s e0) (substitute scope s e1)
-    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+570 |     = Just [(i, t')]
+    |       ^^^^^^^^^^^^^^...
 \end{verbatim}
 
-We can get quickly that the goal is the returned refinement type of \tc{substitute}.
-But to get at the missing lemma, we need to calculate with the assumptions that
-Liquid Haskell has presented.
-To start, we could substitute \tc{freeVars VV} in the goal with what the predicate
-in the inferred refinement type defines it to be.
-
+We can get quickly that the goal is one of the conjuncts in the return
+refinement type of \tc{unifyEq}.
+But to get at the missing lemma, we need to calculate with the assumptions and the
+code of the program. This error message doesn't say what is the term
+with the given inferred type, but from the refinement type signature of
+\tc{unifyEq} we can deduce that it is referring to \tc{t'}. Substituting \tc{VV}
+by \tc{t'} in the predicate of the required type we get
 \begin{verbatim}
-union (freeVars ?b) (freeVars ?c) == freeVarsSubst (freeVars ?a) s
+IntMapSetInt_isSubsetOf
+  (scopesTerm t')
+  (IntMap.union (scopesTerm t0) (scopesTerm t1))
 \end{verbatim}
-
-Then we could substitute the various calls to \tc{freeVars} with what
-the refinement types of \tc{?a}, \tc{?b}, and \tc{?c} define them to be.
-
+Inspecting the code we see that \tc{t'} is the result of \tc{substitute s' t1}, so
+we substitute again.
 \begin{verbatim}
-union (freeVarsSubst (freeVars e0) s) (freeVarsSubst (freeVars e1) s)
-  == freeVarsSubst (union (freeVars e0) (freeVars e1)) s
+IntMapSetInt_isSubsetOf
+  (scopesTerm (substitute s' t1))
+  (IntMap.union (scopesTerm t0) (scopesTerm t1))
 \end{verbatim}
-
-We have already a first sight of the missing assumption, but to get from
-there to the statement of \tc{lemmaFreeVarsSubstUnion}, we still need
-to generalize the calls to \tc{freeVars}.
-
+And now is time to ponder whether this is true and, if so, why. It turns out that
+if the function \tc{substitute} preserves the unification scopes of \tc{t1}, like
+in
 \begin{verbatim}
-freeVarsSubst (union s1 s2) s ==
-  union (freeVarsSubst s1 s) (freeVarsSubst s2 s)
+scopesTerm t1 = scopesTerm (substitute s' t1)
 \end{verbatim}
+then the SMT solver can establish that the goal is true. Unfortunately,
+\tc{substitute} doesn't preserve unification scopes in general, but as we
+noted when we presented the lemma earlier, it does preserve the scopes when
+the range of the substitution \tc{s'} only contains terms which are variables.
 
-It is an open question whether we can hope the tooling to effectively
-assist these calculations one day.
+When there are static check failures insight is often necessary to identify
+a missing lemma or a missing precondition.
+Recursive functions like \tc{skolemize} or \tc{unify} start with a core
+set of conjuncts that is grown as static checks reveal the need of
+stronger postconditions for the result of the recursive calls.
 
 
 \section{Conclusions}
