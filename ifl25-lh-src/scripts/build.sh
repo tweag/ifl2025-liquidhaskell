@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eux
 
+scripts/clean.sh
+
 # clone the liquidhaskell repository at a known commit in the develop branch
 git clone https://github.com/ucsd-progsys/liquidhaskell.git
 cd liquidhaskell
@@ -18,6 +20,7 @@ git apply ../patches/ifl25-liquid-fixpoint.patch
 cd ..
 
 # build liquidhaskell and liquid-prelude
+cabal update
 cabal build liquid-prelude
 
 # run liquidhaskell on the example files
