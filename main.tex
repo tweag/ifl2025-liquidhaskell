@@ -689,39 +689,6 @@ This is our next principle for refinement types:
 % in our repository.
 
 
-\subsection{Comparison}
-
-When using Liquid Haskell we needed to implement the
-\tc{freeVars} function, provide the \tc{ScopedExp} refined type, and the refinement
-type signatures of the substitution primitives. Contrast with an abstract-type based
-approach where a lot primitives must be provided by the abstract interface. The foil,
-in particular, needs several types, type classes, and primitive functions.
-\unsureF{Shall we discuss here that LH is checking a slightly different set of properties?
-We don't check property (2), but we do check that non-renamed binders are removed from
-the domain of the substitution, which the foil leaves to the trusted code.}
-
-\unsure{[Arnaud] I'm not sure yet whether I prefer this subsection to be here,
-  or together with the evaluation section.}
-Liquid Haskell ensures most requirements with little assistance
-because it is delegating much of the work to an underlying SMT solver.
-SMT solvers are tools that decide whether (usually first order) logic formulas are
-satisfiable and provide dedicated mechanisms to reason about various theories
-(sets, strings, arrays, integers, reals, etc).
-
-In the case of capture-avoiding substitution, multiple queries that
-Liquid Haskell gives to the SMT solver involve reasoning on sets, thus
-making effective use of its capabilities. Moreover, the expression of
-relationships between arguments and result is fairly natural with
-refinement types. When there are lemmas to prove, despite of being
-additional effort to write, they still have proofs that don't require
-a lot of creativity.
-
-On the other hand, an approach like the foil does need the author to
-think carefully about how to encode the various static checks with the
-type checker, a non trivial supporting library needs to be written,
-and the effort might need further iterations when accounting for
-additional properties.
-We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-checks}.
 
 
 \section{Unification}
@@ -1391,140 +1358,38 @@ these operations with the appropriate types, instead of putting them in a
 preamble once and for all queries.
 
 
-\subsection{Other limitations of Liquid Haskell}
-\label{limitations-of-liquid-haskell}
+\section{Evaluation}
+\label{SMT-solvers-for-interface-checks}\label{limitations-of-liquid-haskell}
 
-The source code of our unification example lists various defects to fix
-in the user experience that required workarounds. A few of them seem to
-be about ill-resolved names when translating Haskell identifiers to the
-logic language, and there is one example of a function rejected by the
-termination checker that should arguably be accepted.
+The substitution case study of Section~\ref{capture-avoiding-substitution}
+allows for a direct comparison between type methods and refinement methods. We
+can see that the trusted code base of the Liquid Haskell version of
+Section~\ref{the-rapier-with-refinement-types} is quite small compared to that
+of the foil~\cite{maclaurin23} (reviewed in
+Section~\ref{the-rapier-with-stronger-types}). This is in large part due to the
+fact that because refinement types can enforce invariants without the need for
+abstract types, and such an open interface can be extended in user-space.
+Contrast with the abstract-type approach where you have to design, upfront, a
+set of invariant-preserving operation sufficient to express downstream programs.
+None of these functions will benefit from the abstract types invariant, hence
+will be part of the trusted code base. Even when we mix refinement and abstract
+types as in Section~\ref{ensuring-the-scope-set-is-checked}, we don't have quite
+as expensive a trusted code base to consider.
 
-In our code we have been using the simplest possible style of programming.
-There are no GADTs, no type families, not even type classes, though
-Liquid Haskell has some support for type classes~\cite{liu20}. At the moment,
-pushing for more demanding programming patterns is likely to surface more
-inconveniences. Aiming for the simplest style is, therefore, a constraint of
-the current implementation, unless one is willing to contribute fixes or
-look for the workarounds.
+This is not to mean that refinement types are superior to type abstractions.
+They are best at enforcing different types of invariants, as discussed in
+Section~\ref{ensuring-the-scope-set-is-checked}.
 
-On the bright
-side, none of the implementation issues that we have encountered in these
-examples will require answering open research questions.
-But for further insight on the challenges of using Liquid Haskell,
-Gamboa et al.~\cite{gamboa25} report on a study that collects the voices
-of its users.
-
-\section{Evaluation of SMT solvers for interface checks}
-\label{SMT-solvers-for-interface-checks}
-
-As the case studies in this paper reinforce, SMT solvers can go a long way in
-automating static checks. Insight from the user is necessary, however,
-when the properties to check are not handled by any of the theories in the
-solver.
-
-When the property involves user defined recursive functions,
-sometimes it still can be proved automatically if it is attached to the
-refinement type signature of the function. This is the case of the refinement
-types of functions \tc{substitute} and \tc{unification}, where the recursion
-of the proof supports the inductive reasoning required to established the
-property.
-
-When the property cannot be expressed in the signature of a recursive function,
-like the lemmas that have been presented, writing lemmas becomes necessary. The
-inconvenience is two-fold. In the one hand, the lemma needs to be precisely
-written and then demonstrated. And in the other hand, the user needs to figure
-out the right set of parameters to apply it to at the sites where it is needed.
-
-These inconveniences are alleviated by the fact that one can still use the
-SMT solvers to write abbreviated demonstrations of the lemmas. Additionally,
-it would be plausible that one can rely on additional mechanisms to help
-discover the parameters to which they are applied. In the case of Liquid
-Haskell, there is an implementation of automatic rewrite rules~\cite{grannan22}
-that is meant to address the problem for lemmas about equalities.
-
-It would be possible to ask the SMT solver to instantiate the lemma parameters
-as needed by introducing assertions with universal quantification. For instance,
-the universally quantified lemma \tc{lemma\-FreeVars\-Subst\-Union} follows.
-
-\begin{verbatim}
-(assert
-  (forall
-    ((s (Subst Term))
-     (s1 (Set Int))
-     (s2 (Set Int)))
-    (freeVarsSubst (union s1 s2) s
-       == union (freeVarsSubst s1 s) (freeVarsSubst s2 s))))
-\end{verbatim}
-
-When checking satisfiability of other assertions, the SMT solver
-will try to use the universally quantified assertion. Unfortunately, the
-behavior of the procedures to find instantiations for quantified variables are
-not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
-
-On the performance front, all of the SMT-LIB queries in the unification example run
-in 6 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
-That is sometimes faster than it takes to compile the modules with the GHC compiler.
-Where things get slower is when measuring Liquid
-Haskell, which spends several seconds checking the examples and interacting with the
-SMT solver (37 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
-1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
-can be improved to approach that of the SMT solver queries, and probably further by
-reducing the amount of queries.
-
-Other than using an SMT solver in the fashion of Liquid Haskell, F*~\cite{swamy16},
-Why3~\cite{filli13}, or Dafny~\cite{leino17},
-the alternatives to implementing interface checks are either to encode the checks in
-the type-checker, or to migrate to a dependently typed language for the sake of
-static checking~\cite{haftmann10, breitner18, carr22}. Of these alternatives,
-we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
-a fine demonstration about the foil.
-
-Perhaps one of the biggest compromises when encoding properties in the type-checker
-is that one needs to narrow the expressible properties to a feasible set that allows
-to write a supporting library. If we wanted to have static checks like those of the
-unification example, ensuring that the return terms satisfy the scope check and the
-occurs check would require new type encodings. Or in other words, new type indices
-need to be conceived to relate the parameters of the function \tc{unify}.
-$$\mathit{unify} :: \mathit{Formula}\ f_1 \ldots f_n -> [(\mathit{Var}\ v_1 \ldots v_m, \mathit{Term}\ t_1 \ldots t_r)]$$
-
-Then there would be the effort of writing a library, and later on there would be the
-effort of composing the encodings of different libraries when more than one such
-is needed. Suppose we started with the static checks to avoid name captures as in
-Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
-required to deal with unification variables. With refinement types we need to add
-the corresponding conjuncts to the refinement types.
-
-\begin{verbatim}
-type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
-type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
-
-substituteFormula
-  :: scope:Set Int
-  -> s:Subst (ScopedTerm scope)
-  -> {f:ScopedFormula (domain s) |
-           consistentSkolemScopes f
-        && UnionCommutes (scopes f) (scopesSubst s)
-     }
-  -> {v:ScopedFormula scope |
-          formulaSize f == formulaSize v
-       && consistentSkolemScopes v
-       && existsCount v = existsCount f
-       && intMapIsSubsetOf (scopes v) (IntMap.union (scopes f) (scopesSubst s))
-     }
-\end{verbatim}
-Besides the usual scope checks, we are checking that the size of the formula
-is preserved, that the amount of existential binders is preserved, and that
-the unification scopes in the output are those in the input formula and in
-the range of the substitution. We also check that substitution preserves
-the consistency of the unification scopes.
-
-Less planning and setup seems necessary when composing refinement types, and
-then we can hope SMT solvers to continue to check the same constraints
-they were fed when the properties where checked in isolation.
+When the invariants of a program naturally involved mathematical objects such as
+arithmetic or sets, refinement types are likely to be more approachable,
+requiring less careful a design than coming up with an encoding inside and
+ML-like type system. On the other hand when a program needs a theory that Liquid
+Haskell, say, doesn't have support for, it may not be that clear and the program
+author may need to mobilize comparable effort for refinement type as she would
+have for an abstract-type encoding.
 
 The type-checker approach, however, is likely to produce error messages that
-are easier to fix, provided that the user goal is feasible.
+are easier both to understand to fix, provided that the user goal is feasible.
 The user is guided into correcting the errors
 by the types and the operations of the supporting library. With SMT solvers,
 there is always the question of whether a goal is provable or not in the
@@ -1532,12 +1397,12 @@ theories at hand. Is there some additional lemma that is necessary about the use
 functions? The user has to figure it out on her own. How are the assumptions
 insufficient to prove the goal? The user has to compute it on her own too,
 although it is plausible that counterexamples or better location information~\cite{webbers24}
-can be proposed by the tooling when the integration matures.
+can be offered when the tooling matures.
 
 As an example, let us consider the lemma \tc{lemmaSubstituteScopesTerm} discussed in
 Section~\ref{checking-unifyEq}.
 If we drop this lemma from the definition of \tc{unifyEq}, we get the following
-error message, heavily edited for presentation.
+error message (heavily edited for presentation):
 \begin{verbatim}
 tests/rapier/Unif.hs:570:7: error:
     Liquid Type Mismatch
@@ -1596,15 +1461,150 @@ in
 scopesTerm t1 = scopesTerm (substitute s' t1)
 \end{verbatim}
 then the SMT solver can establish that the goal is true. Unfortunately,
-\tc{substitute} doesn't preserve unification scopes in general, but as we
-noted when we presented the lemma earlier, it does preserve the scopes when
+\tc{substitute} doesn't preserve unification scopes in general,
+but it does preserve the scopes when
 the range of the substitution \tc{s'} only contains terms which are variables.
 
-When there are static check failures insight is often necessary to identify
+When there are static check failures, insight is often necessary to identify
 a missing lemma or a missing precondition.
 Recursive functions like \tc{skolemize} or \tc{unify} start with a core
 set of conjuncts that is grown as static checks reveal the need of
 stronger postconditions for the result of the recursive calls.
+
+Maybe relatedly, the maturity of refinement type checkers in general, and Liquid
+Haskell in particular, is rather lacking still. We have encountered a
+non-trivial number of bugs and user-experience defects while conducting our
+study. Our artifact contains comments explaining the bugs where we were
+affected. Thankfully none of the bugs that we found look really difficult to
+fix, but they do have a severe impact on user experience in aggregate.
+
+Besides, Liquid Haskell lacks support for many standard features of Haskell.
+In our code we have been using the simplest possible style of programming.
+There are no GADTs, no type families, not even type classes (though
+Liquid Haskell has some support for type classes~\cite{liu20}). At the moment,
+pushing for more demanding programming patterns is likely to surface more
+inconveniences. Aiming for the simplest style is, therefore, a pragmatic constraint of
+the current implementation. For further insight on the challenges of using Liquid Haskell,
+Gamboa et al.~\cite{gamboa25} report on a study that collects the voices
+of its users.
+
+On the performance front, all of the SMT-LIB queries in the unification example run
+in 6 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
+That is sometimes faster than it takes to compile the modules with the GHC compiler.
+Where things get slower is when measuring Liquid
+Haskell end-to-end, which spends several seconds checking the examples and interacting with the
+SMT solver (37 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
+1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
+can be improved to approach that of the SMT solver queries, and probably further by
+reducing the amount of queries.
+
+% Liquid Haskell ensures most requirements with little assistance
+% because it is delegating much of the work to an underlying SMT solver.
+% SMT solvers are tools that decide whether (usually first order) logic formulas are
+% satisfiable and provide dedicated mechanisms to reason about various theories
+% (sets, strings, arrays, integers, reals, etc).
+
+% In the case of capture-avoiding substitution, multiple queries that
+% Liquid Haskell gives to the SMT solver involve reasoning on sets, thus
+% making effective use of its capabilities. Moreover, the expression of
+% relationships between arguments and result is fairly natural with
+% refinement types. When there are lemmas to prove, despite of being
+% additional effort to write, they still have proofs that don't require
+% a lot of creativity.
+
+% On the other hand, an approach like the foil does need the author to
+% think carefully about how to encode the various static checks with the
+% type checker, a non trivial supporting library needs to be written,
+% and the effort might need further iterations when accounting for
+% additional properties.
+% We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-checks}.
+
+% When the property involves user defined recursive functions,
+% sometimes it still can be proved automatically if it is attached to the
+% refinement type signature of the function. This is the case of the refinement
+% types of functions \tc{substitute} and \tc{unification}, where the recursion
+% of the proof supports the inductive reasoning required to established the
+% property.
+
+% When the property cannot be expressed in the signature of a recursive function,
+% like the lemmas that have been presented, writing lemmas becomes necessary. The
+% inconvenience is two-fold. In the one hand, the lemma needs to be precisely
+% written and then demonstrated. And in the other hand, the user needs to figure
+% out the right set of parameters to apply it to at the sites where it is needed.
+
+% These inconveniences are alleviated by the fact that one can still use the
+% SMT solvers to write abbreviated demonstrations of the lemmas. Additionally,
+% it would be plausible that one can rely on additional mechanisms to help
+% discover the parameters to which they are applied. In the case of Liquid
+% Haskell, there is an implementation of automatic rewrite rules~\cite{grannan22}
+% that is meant to address the problem for lemmas about equalities.
+
+% It would be possible to ask the SMT solver to instantiate the lemma parameters
+% as needed by introducing assertions with universal quantification. For instance,
+% the universally quantified lemma \tc{lemma\-FreeVars\-Subst\-Union} follows.
+
+% \begin{verbatim}
+% (assert
+%   (forall
+%     ((s (Subst Term))
+%      (s1 (Set Int))
+%      (s2 (Set Int)))
+%     (freeVarsSubst (union s1 s2) s
+%        == union (freeVarsSubst s1 s) (freeVarsSubst s2 s))))
+% \end{verbatim}
+
+% When checking satisfiability of other assertions, the SMT solver
+% will try to use the universally quantified assertion. Unfortunately, the
+% behavior of the procedures to find instantiations for quantified variables are
+% not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
+
+Other than using an SMT solver in the fashion of Liquid Haskell, F*~\cite{swamy16},
+Why3~\cite{filli13}, or Dafny~\cite{leino17},
+the alternatives to implementing interface checks are either to encode the checks in
+the type-checker, or to migrate to a dependently typed language for the sake of
+static checking~\cite{haftmann10, breitner18, carr22}. Of these alternatives,
+we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
+a fine demonstration about the foil.
+
+Perhaps one of the biggest compromises when encoding properties in the type-checker
+is that one needs to narrow the expressible properties to a feasible set that allows
+to write a supporting library. If we wanted to have static checks like those of the
+unification example, ensuring that the return terms satisfy the scope check and the
+occurs check would require new type encodings. Or in other words, new type indices
+need to be conceived to relate the parameters of the function \tc{unify}.
+$$\mathit{unify} :: \mathit{Formula}\ f_1 \ldots f_n -> [(\mathit{Var}\ v_1 \ldots v_m, \mathit{Term}\ t_1 \ldots t_r)]$$
+
+Then there would be the effort of writing a library, and later on there would be the
+effort of composing the encodings of different libraries when more than one such
+is needed. Suppose we started with the static checks to avoid name captures as in
+Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
+required to deal with unification variables. With refinement types we need to add
+the corresponding conjuncts to the refinement types.
+
+\begin{verbatim}
+type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
+type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
+
+substituteFormula
+  :: scope:Set Int
+  -> s:Subst (ScopedTerm scope)
+  -> {f:ScopedFormula (domain s) |
+           consistentSkolemScopes f
+        && UnionCommutes (scopes f) (scopesSubst s)
+     }
+  -> {v:ScopedFormula scope |
+          formulaSize f == formulaSize v
+       && consistentSkolemScopes v
+       && existsCount v = existsCount f
+       && intMapIsSubsetOf (scopes v) (IntMap.union (scopes f) (scopesSubst s))
+     }
+\end{verbatim}
+Besides the usual scope checks, we are checking that the size of the formula
+is preserved, that the amount of existential binders is preserved, and that
+the unification scopes in the output are those in the input formula and in
+the range of the substitution. We also check that substitution preserves
+the consistency of the unification scopes.
+
 
 
 \section{Conclusions}
