@@ -708,9 +708,10 @@ We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-c
 \section{Unification}
 \label{unification}
 
+% hereditary Harrop formulas~\cite{miller91}
 Now that we have established the refined rapier interface, let us show how it
 can be applied to a more realistic example: solving first-order equational
-formulas. Specifically, we'll be solving a form of hereditary Harrop formulas~\cite{miller91} in
+formulas. Specifically, we'll be solving a form of Horn clauses in
 the Herbrand domain. This is the sort of unification problem which can show up
 when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
@@ -719,21 +720,23 @@ The source code of this section can be found in the file
 \tc{Unif.hs}.\footnote{Source code of unification: \sourcefile{Unif.hs}}
 
 In addition to variables, still represented as integers, we have unification
-variables. Unification variables have their own scope: the formula
+variables. Unification variables have their own scopes: the formula
 $\exists x. \forall y. x=y$ doesn't have a solution. It will be reduced to a
 formula of the form $f_{x} = y$ where $f_{x}$ is a unification variable; we very much
 don't want this unification problem to succeed\improvement{I think we should
   use a better notation to distinguish unification variables from rigid
   variables.}: we shall make it so that $y$ isn't in the permissible scope for $f_{x}$.
 
-Furthermore, we will perform substitutions, substitutions are blocked by
+Furthermore, the unification algorithm will perform substitutions, substitutions are blocked by
 unification variables as we don't know what they stand for yet. So a unification
 variable, in our syntax, is a pair $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ of a
 unification variable proper and a suspended substitution. Where
 $\{x_0,\ldots,x_{n}\}$ is the scope of $f$. Such a pair is akin to a skolem
 function application $f(t_0,\ldots,t_n)$. Notice in particular, how the solution
 of $f$ can only have free variables in $\{x_0,\ldots,x_{n}\}$, but
-$(f, [x_0:=t_0,\ldots,x_n:=t_n])$ may live in a different scope altogether. This
+$(f, [x_0:=t_0,\ldots,x_n:=t_n])$ may live in a different scope altogether.
+That there is multiple intermingled scopes to manage, rather than one like
+in the case of substitution (Section~\ref{capture-avoiding-substitution})
 is what makes this type of unification problem tricky.
 
 \begin{verbatim}
@@ -745,6 +748,32 @@ This way, our formula $\exists x. \forall y. x=y$ will be reduced to
 $(f_{x},[]) = y$ which doesn't have a solution. On the other hand
 $\forall x. \exists y. x = y$ becomes $x = (f_{y}, [x:=x])$ so $x$ is a solution
 for $f_{y}$ and the formula is solvable.
+
+Our unification algorithm is a first-order variant of pattern
+unification~\cite{miller91-pattern} sufficient to eliminate equalities to the
+left of implication in the style proposed by~\citet{miller22}. The main
+functions, sans refined signatures, can be found in
+Figure~\ref{conditional-unification}. Unification algorithms can get pretty
+finicky, for the sake of simplicity our algorithm isn't as complete as it could
+be and will miss some solutions\footnote{We have, on the other hand, tried to
+  make the algorithm correct, so if it finds unsound solution it's a bug and we
+  apologize.}.
+
+At the heart of the algorithm is substitution inversion~\cite{ziliani15}: when
+encountering an equality of the form
+$$(f_{x},[y:=a, z:=b]) = u$$
+We want the solution (if there is one, there are some conditions) to be
+$$f_{x} := u[a:=y, b:=z]$$
+This is the same as pattern unification, except that it doesn't need terms to
+contain functions. The \tc{inverseSubst} function is responsible for this
+inversion.
+
+We're choosing a language of term with both regular variable (representing
+variables bound by universal quantifiers), skolem applications representing
+unification variables with their substitutions, as well as sufficient
+constructor to encode arbitrary terms. Here is the concrete type of term, as
+well as that of formula where the only thing to remark is that the left-hand
+side of implications is a single equality.
 
 \begin{verbatim}
 data Term
@@ -758,33 +787,26 @@ data Formula
   | Forall Var Formula         -- universal quantification
 \end{verbatim}
 
-Our term language allows for variables, skolem applications, and some artificial
-data constructors (i.e. injective functions). The language of formulas has
-equality, conjunction, existential and universal quantification, and it also
-has a form of implication that only allows for equalities in the antecedent.
-The conception is driven by the simplest language that still would allow to
-express something of practical interest like constraints of generalized
-algebraic data types (GADTs)~\cite{schrijvers09}.
-
-Our unification algorithm is then expressed in Figure~\ref{conditional-unification}.
-The function \tc{unify} takes a scope parameter containing all the variables that
-can appear free in the input formula. This set is useful to rename \tc{Forall}
+In Figure~\ref{conditional-unification}, the function \tc{unify} takes a rapier scope parameter containing all the variables that
+can appear free in the input formula. This set is used to rename \tc{Forall}
 binders when doing substitutions. For instance, unifying the following formula
 $$\forall x. \forall y. \exists z. y = L(x) \Rightarrow \forall x. y = z$$
 reduces to unifying
 $$\forall x. \forall y. \exists z. (\forall x. y = z)[y:=L(x)]$$
 and the substitution needs to rename the inner binder $x$.
 
-There is a preceding pass, not shown in the figure, which replaces existential variables
-with skolem applications. We have functions \tc{substituteFormula} and \tc{substitute}
-to apply substitutions in formulas and terms, \tc{substituteSkolems} to  substitute
+In a preceding pass (Section~\ref{sec:skolemize}), existential quantifiers are replaced
+with skolem applications, so in \tc{unify} we assume that there is no
+existential quantifier. We have functions \tc{substituteFormula} and \tc{substitute}
+to apply substitutions in formulas and terms respectively, \tc{substituteSkolems} to  substitute
 skolems in formulas. We have a function \tc{skolemSet} to collect the skolems of a
 term. And a function \tc{fromListSubst} to construct a substitution from a list of
 pairs \tc{[(Var, Term)]}.
 
-The functions \tc{substEq} and \tc{unifyEq} are slightly more complex in the source files
-as they also deal with the data constructors of our \tc{Term} language, but they are
-not essential to the discussion in this section.
+The functions \tc{substEq} and \tc{unifyEq} are simplified here to their barest
+essence (in particular \tc{unifyEq} never fails in this simple form, it can fail
+in the artifact). They handle more cases in the accompanying artifact, but these
+case aren't essential to our the discussion in this article.
 
 \begin{figure}
 \begin{verbatim}
@@ -836,7 +858,7 @@ inverseSubst (Subst xs) = fmap Subst (go xs)
 The function \tc{unifyEq} defines what a good solution should be.
 One of the conditions is that whatever term \tc{t'} is proposed
 as solution for a skolem \tc{i}, it needs to have as free variables only those in the
-domain of the substitution defining the skolem application
+codomain of the substitution defining the skolem application
 (\textit{scope check}). Another
 condition is that the skolem \tc{i} should not occur in the solution
 \tc{t'} (\textit{occurs check}). And since we are inverting a substitution to find
@@ -847,6 +869,7 @@ to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L
 
 
 \subsection{A look at skolemization}
+\label{sec:skolemize}
 
 Figure~\ref{skolemization} shows the function to replace existential quantifiers
 with unification variables. This example is interesting because the complexity of
@@ -887,18 +910,18 @@ input formula. The set \tc{se} in the monadic state contains the variables
 that have been introduced with existential quantification \tc{se}.
 
 We expect the set \tc{sf} to be a subset of \tc{se}. This is to reflect the
-fact that we don't want unification variables to be called the same as
+fact that, for debugging purposes, we don't want unification variables to be called the same as
 universally quantified variables. It is not a strict requirement, but one
 that makes the output of \tc{skolemize} considerably easier to read.
 
 We also really need to put the set \tc{se} in the monadic state, as we don't
 want to generate the same unification variable for existentials appearing
-on different subformulas. For instance, the following formula
+on different subformulas, since unification variables scope over the entire formula. For instance, the following formula
 $$\forall x. \exists y. x = y \land \forall z. \exists y. z = y$$
 should produce unification variables like
 $$\forall x. x = y[x:=x] \land \forall z. z = w[x:=x, z:=z]$$
-It would be a mistake to call both unification variables $y$ and $w$ the same,
-as their occurrences have different scopes!
+It would be a mistake to call both unification variables $y$ and $w$ the same.
+Their occurrences even have different scopes!
 
 Lastly, we do need to keep the scope set \tc{sf} separate from the monadic
 state because it is needed to construct the skolem function applications where
@@ -931,40 +954,57 @@ skolemize
        _ _
      / [formulaSize f]
 \end{verbatim}
-Preconditions on the state set \tc{se0} come between a first pair of braces,
-and postconditions on the return value and the output state \tc{se} come in
-a second pair of braces. Refinement types for the State monad are not readily
-available in Liquid Haskell, but they can be put together from examples in
-the project test suite. We provide our recollection of it in the file
-\tc{State.hs}.\footnote{Refinment type support for the State monad: \sourcefile{State.hs}}.
 
-The logic function \tc{IntMapSetInt\_keys} is part of the extension to Liquid
-Haskell that we discuss in Section~\ref{extending-liquid-haskell}. It provides
-a set containing the keys of a given \tc{IntMap}.
+This type signature is, admittedly, a little bit involved. However while we were
+designing this case study, \tc{skolemize} stayed without a refined signature
+until pretty much the very end\unsure{I assume that you had a minimal assumed
+  signature}. This doesn't cause any problem as, due to refinement types'
+inherent subtyping, it's easy to use unrefined and refined functions together.
+Of course this prevented us from having guarantees for the program end-to-end,
+but it's often enough add guarantees only where you need them. What you choose
+to harden will not have to infect the rest of our program.
+Which leads us to our next principle
 
-The postconditions that are most important for users of \tc{skolemize} are
-\tc{consistentSkolemScopes v} and \tc{existsCount v = 0}, meaning that no
-existential quantifier remains, and that every occurrence of a given
-unification variable has the same scope. These are exactly the requirements
-of the refinement type signature of \tc{unify} to come in Section~\ref{checking-unify}.
-\unsureF{If this subsection is to stay, and to stay at this place, we may have to
-move the introduction of these and other functions here. But I think it needs
-your assessment before taking the trouble.}
-The rest of the postconditions are invariants needed during the recursion
-to check the first two.
-We leave the encoding of these properties in the Haskell type system as an
-exercise for the reader.
+\begin{principle}
+  Functions with refined signature and without mix well. You should first use
+  refinement types on function with the best power-to-weight ratio. You can
+  incrementally add stronger types on more functions as your program evolves.
+\end{principle}
 
-We won't discuss the checking process for this function, as examples follow
-which  don't require the burden of explaining the mechanisms for
-checking monadic code. But we do note that all the cases of the function
-\tc{skolemize} are checked as it appears in Figure~\ref{skolemization},
-except for the case of existential quantifiers which cause Liquid Haskell
-to hang at the moment.\unsureF{Such a terrible ending for a great section. It is the SMT solver that seems to be hanging on some query.}
+Liquid Haskell helpfully lets us treat the state monad has being equipped with
+Hoare triples \tc{State<pre,post>}. The supporting code for the refined state
+monad is not readily available in Liquid Haskell. It probably should be, but in
+the meantime, it can be found in Liquid Haskell's test suite, so we simply
+copied it in our artifact\footnote{Refinement type support
+  for the State monad: \sourcefile{State.hs}}.
+
+The main conjuncts of the postconditon are \tc{consistentSkolemScopes v} and
+\tc{existsCount v = 0}, the rest are invariant used by the recursive calls of
+\tc{skolemize}.
+\begin{itemize}
+  \item \tc{existsCount v = 0} means that \tc{skolemize} returns a formula without
+  existential quantifier. As is a requirement of \tc{unify}.
+  \item \tc{consistentSkolemScopes v} means that \tc{skolemize} returns a
+  formula $F$ such that all the occurrences of any unification variable $i$ in $F$
+  has the same scope. This is our main scope invariant for this section.
+\end{itemize}
+\unsure{I removed the paragraph on stuff hanging. Maybe we want to discuss this
+  limitation in the conclusion}
+
+% We won't discuss the checking process for this function, as examples follow
+% which  don't require the burden of explaining the mechanisms for
+% checking monadic code. But we do note that all the cases of the function
+% \tc{skolemize} are checked as it appears in Figure~\ref{skolemization},
+% except for the case of existential quantifiers which cause Liquid Haskell
+% to hang at the moment.\unsureF{Such a terrible ending for a great section. It is the SMT solver that seems to be hanging on some query.}
 
 
-\subsection{Checking \tc{unifyEq}}
+\subsection{The theory of \tc{unifyEq}}
 \label{checking-unifyEq}
+
+Let us now turn to the \tc{UnifyEq} function, which is a traditional unification
+function: it takes an equation and returns an identifier. It is simplified to
+never fail for conciseness, but it can indeed fail in the artifact.
 
 We start introducing static checks by providing a refinement type signature to
 the function \tc{unifyEq}, which encodes the scope check, the occurs check,
@@ -1004,35 +1044,28 @@ scopesTerm (L t) = scopesTerm t
 scopesTerm (P t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
 
-In this function we are using the data type \tc{IntMap}, also coming from the
-package \tc{containers}. Liquid Haskell can link the calls in this function
-with the array theory that is used to represent maps in the SMT solver.
-The function \tc{scopesSubst} provides the skolems present in the range of
-the substitution.
-
-We define the predicate \tc{isSubsetOfJust} to say that the lookup succeeds
-and that it yields a superset of the first argument.
-
+We would like to draw the reader's attention to the precondition
 \begin{verbatim}
-isSubsetOfJust :: Ord a => Set a -> Maybe (Set a) -> Bool
-isSubsetOfJust xs (Just ys) = Set.isSubsetOf xs ys
-isSubsetOfJust xs Nothing = False
+unionCommutes (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
+The \tc{unionCommutes m1 m2} predicates states that \tc{union m1 m2 = union m2
+  m1}, which in turn, because \tc{union} is the left-biased union of maps,
+means that any key defined in both \tc{m1} and \tc{m2} have the same associated
+value in both. This is the binary version of our
+\tc{consistent\-SkolemScopesTerm} predicate. The statement is a bit indirect,
+but that's for a good reason. Since our version of Liquid Haskell understands
+the theory of finite maps over integers
+(Section~\ref{extending-liquid-haskell}), means that this statement is going to
+be translated to a theory of the SMT solver rather than a complex formula. Which
+constitutes our next principle.
 
-We require the function \tc{IntMap.union} to be commutative when applied to
-maps of scopes, despite of it being
-defined as left-biased in the \tc{containers} package. This is because we
-rely on the skolemization pass to ensure that, everywhere a
-skolem occurs, the domain of the substitution is always the same.
+\begin{principle}
+  SMT solvers are at their more effective when they can leverage their theories.
+  Prefer writing refinement types by appealing to theories known by your system.
+\end{principle}
 
-\begin{verbatim}
-unionCommutes :: Set a -> Set a -> Bool
-unionCommutes s0 s1 = IntMap.union s0 s1 == IntMap.union s1 s0
-\end{verbatim}
-
-This allows us to define the predicate \tc{consistentSkolemScopesTerm},
-which ensures that all occurrences of a skolem have the same domain in
-their suspended substitutions in a given term.
+In fact this same expression is used in the definition of
+\tc{consistent\-SkolemScopesTerm} for the very same reason.
 
 \begin{verbatim}
 consistentSkolemScopesTerm :: Term -> Bool
@@ -1045,60 +1078,18 @@ consistentSkolemScopesTerm (P t0 t1) =
     && unionCommutes (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
 
-The function \tc{intMapIsSubsetOf} is implemented by the authors in Liquid
-Haskell, since it doesn't come from the package \tc{containers}. We say more
-about it in Section~\ref{extending-liquid-haskell}. It returns
-true if and only if all the key-value pairs of the first argument are contained
-in the second.
-
-When checking \tc{unifyEq}, the two first conjuncts of the return type can
-be easily established since they match closely the guards in the first equation.
-The third conjunct demands more calculation.
-
-If we substitute \tc{t} by \tc{substitute s' t0} in the last conjunct, we get that we
-need to prove
+As a side note, \tc{unifyEq} is an example of a function whose code needs to be
+annotated to help the Liquid Haskell check the refined signature. We've needed
+a handful of lemmas. Here's one of them. Its proof is a regular (and rather
+straightforward) recursive function
 
 \begin{verbatim}
-IntMap.isSubsetOf
-  (scopesTerm (substitute s' t0)
-  (IntMap.union (scopesTerm t0) (scopesTerm t1))
-\end{verbatim}
-
-Liquid Haskell does compute this on its own. Then we can use the fact that substitution
-preserves the skolems returned by \tc{scopesTerm} to arrive at
-
-\begin{verbatim}
-IntMap.isSubsetOf
-  (scopesTerm t0)
-  (IntMap.union (scopesTerm t0) (scopesTerm t1))
-\end{verbatim}
-
-And this statement the SMT solver can prove on its own using the theory of arrays,
-which can be used to implement maps. The only step that the user needs to spell out
-is the property relating \tc{substitute} and \tc{scopesTerm}.
-
-\begin{verbatim}
+{-@
 lemmaSubstituteScopesTerm
   :: s:Subst {ti:Term | isVar ti}
   -> t:Term
   -> { scopesTerm t = scopesTerm (substitute s t) }
-\end{verbatim}
-
-The range of the substitution \tc{s} is required to only contain variables, but
-this is exactly what \tc{inverseSubst} produces!
-
-\begin{verbatim}
-isVar :: Term -> Bool
-isVar (V _) = True
-isVar _ = False
-
-{-@ inverseSubst :: Subst Term -> {v:Subst {t:Term | isVar t} @-}
-\end{verbatim}
-
-Here is the proof of the lemma, which follows the recursive structure
-of function \tc{substitute}.
-
-\begin{verbatim}
+ @-}
 lemmaSubstituteScopesTerm :: Subst Term -> Term -> ()
 lemmaSubstituteScopesTerm s (SA (_, s1)) = lemmaComposeSubstDomain s1 s
 lemmaSubstituteScopesTerm s U = ()
@@ -1109,8 +1100,9 @@ lemmaSubstituteScopesTerm s (V v) = case lookupSubst v s of
     { Nothing -> (); Just (V _) -> (); Just _ -> () }
 \end{verbatim}
 
-We cut the proof in the case of skolems with an assumption about the
-skolems and domains of compositions of substitutions.
+The proof uses itself another lemma, which we've assume in keeping with the principle of only
+proving what provides value.
+
 \begin{verbatim}
 assume lemmaComposeSubstDomain
   :: s0:Subst Term -> s1:Subst {t:_ | isVar t}
@@ -1118,24 +1110,11 @@ assume lemmaComposeSubstDomain
       && scopesSubst s0 == scopesSubst (composeSubst s0 s1) }
 \end{verbatim}
 
-The last conjunct \tc{consistentSkolemScopesTerm t} of \tc{unifyEq} follows
-from the refinement types of the inputs, and another lemma that relates
-the skolem scopes with \tc{substitute}.
-\begin{verbatim}
-lemmaSubstituteConsistentScopes
-  :: s:Subst {st:Term | consistentSkolemScopesTerm st && isVar st}
-  -> {t:Term | consistentSkolemScopesTerm t}
-  -> { consistentSkolemScopesTerm (substitute s t) }
-\end{verbatim}
-This lemma is provable in a similar way to \tc{lemmaSubstituteScopesTerm}.
-
-
-\subsection{Checking \tc{unify}}
+\subsection{Totality and \tc{unify}}
 \label{checking-unify}
 
-In the same way as in the previous section, we start checking the function \tc{unify}
-by providing a refinement type signature. This is a rephrasing of the refinement
-types of \tc{unifyEq} when the input is a formula instead of a pair of terms.
+There is not much more to add for the \tc{unify} function, but let us take this
+opportunity to talk about totality requirement. Here is its signature.
 
 \begin{verbatim}
 unify
@@ -1152,80 +1131,110 @@ unify
       )] / [formulaSize f]
 \end{verbatim}
 
-The recursion of unify is not structural since in the conjunction and implications
-cases we are not feeding subformulas. Therefore we provide a termination
-metric \tc{formulaSize} that counts the amount of connectives in a formula.
-We have a function \tc{existsCount} that yields the amount of existential
-quantifiers in a formula.
-We also define a function \tc{scopes} analogous to \tc{scopesTerm} to obtain the skolems
-of a formula.
+Notice the precondition \tc{existsCount = 0}. It is not optional. Indeed, the
+\tc{Exists} case of \tc{unify} in Figure~\ref{conditional-unification} raises an
+error. Liquid Haskell, however, requires functions to be total. We need this
+precondition so that Liquid Haskell can prove that this case never occurs.
 
+This totality requirement isn't necessary to refinement types in general.
+However, in the case of Haskell, laziness lets us write
 \begin{verbatim}
-scopes :: Formula -> IntMap Var (Set Int)
-scopes (Forall _ f) = scopes f
-scopes (Exists _ f) = scopes f
-scopes (Conj f1 f2) = IntMap.union (scopes f1) (scopes f2)
-scopes (Then (t0, t1) f2) =
-  IntMap.union (scopesTerm t0) (IntMap.union (scopesTerm t1) (scopes f2))
-scopes (Eq t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
+{-@ bad :: () -> { _ :: () | True = False } @-}
+bad :: () -> { _ :: () | True = False }
+bad _ =
+  let
+    {-@ f :: { _ :: () | False } @-}
+    f = error "never happens"
+  in
+  ()
 \end{verbatim}
+Liquid Haskell wants to accept this function because \tc{f} appears to prove
+\tc{False}. In a strict language this wouldn't be a big problem as \tc{bad} would
+loop and any attempt at using \tc{True = False} would diverge. But \tc{bad} is
+actually a total function. Liquid Haskell rejects \tc{bad} because it fails to
+prove that \tc{f} is total, hence refuses to accept its signature.
 
-We also define the predicate \tc{consistentSkolemScopes}, analogous to
-\tc{consistentSkolemScopesTerm} which ensures that skolem scopes are
-consistent in a formula.
+This is also why the signature of \tc{unify} ends with \tc{/ [formulaSize f]}.
+Liquid Haskell needs to prove that \tc{unify} terminates and, because of the
+substitutions, \tc{unify} isn't a structurally recursive function, so Liquid
+Haskell need a little help in the form of a termination metric (here the number
+of connectives in the argument formula, which is unaffected by substitution
+since we only substitute inside terms).
 
-Liquid Haskell can check mostly automatically the refinement type signature of
-\tc{unify}. In the equations for quantifiers, unfolding definitions of
-\tc{scopes} plus the refinement type of the recursive calls suffices.
-In the equation of conjunction, the theory of arrays of the SMT solver
-kicks in to establish the first conjunct of the refinement type:
+% The recursion of unify is not structural since in the conjunction and implications
+% cases we are not feeding subformulas. Therefore we provide a termination
+% metric \tc{formulaSize} that counts the amount of connectives in a formula.
+% We have a function \tc{existsCount} that yields the amount of existential
+% quantifiers in a formula.
+% We also define a function \tc{scopes} analogous to \tc{scopesTerm} to obtain the skolems
+% of a formula.
 
-\begin{verbatim}
-unionCommutes (scopes f1) (scopes f2)
-=>
-(isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f1)) =>
-  isSubsetOfJust
-    (freeVars t)
-    (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
-&&
-(isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f2)) =>
-  isSubsetOfJust
-    (freeVars t)
-    (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
-\end{verbatim}
+% \begin{verbatim}
+% scopes :: Formula -> IntMap Var (Set Int)
+% scopes (Forall _ f) = scopes f
+% scopes (Exists _ f) = scopes f
+% scopes (Conj f1 f2) = IntMap.union (scopes f1) (scopes f2)
+% scopes (Then (t0, t1) f2) =
+%   IntMap.union (scopesTerm t0) (IntMap.union (scopesTerm t1) (scopes f2))
+% scopes (Eq t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
+% \end{verbatim}
 
-The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
-in the refinement type of the input. The consequent relates the refinement types
-of the recursive calls to the expected refinement type of the result, as Liquid
-Haskell knows that \tc{IntMap.\allowbreak union (scopes f1) (scopes f2)} stands for
-\tc{scopes (Conj f1 f2)}. An additional lemma is also needed to convince Liquid
-Haskell that \tc{substituteSkolems} is going to preserve \tc{consistentSkolemScopes}.
-This lemma relates the scopes of a substitution with the scopes in any map.
-\begin{verbatim}
-lemmaScopesListSubset
-  :: m0:IntMap (Set Int)
-  -> s:[(Var, {t:Term | intMapIsSubsetOf (scopesTerm t) m0})]
-  -> { intMapIsSubsetOf (scopesList s) m0 }
-\end{verbatim}
-Here \tc{scopesList} is a function that collects the skolem scopes in a list of
-pairs, and the lemma is instantiated with the scopes of the input formula.
-\begin{verbatim}
-unify s f@(Conj f1 f2) = do
-    unifyF1 <- unify s f1
-    let lemmaSubst = lemmaScopesListSubset (scopes f) unifyF1
-    unifyF2 <- unify s (substituteSkolems (f2 ? lemmaSubst) unifyF1)
-    return (unifyF1 ++ unifyF2)
-\end{verbatim}
-This lemma helps convince the SMT solver that the union of \tc{scopes f2}
-and \tc{scopesList unifyF1} commutes, that is the scopes in the arguments of
-\tc{substituteSkolems}, which is a necessary condition for ensuring that
-\tc{consistentSkolemScopes} is preserved.
+% We also define the predicate \tc{consistentSkolemScopes}, analogous to
+% \tc{consistentSkolemScopesTerm} which ensures that skolem scopes are
+% consistent in a formula.
 
-The second conjunct of the return refinement type of \tc{unify}
-is accepted as it is established by the recursive calls and \tc{unifyEq}
-as is. And the other equations in \tc{unify} are checked using similar reasoning,
-all of it automatic except for a lemma similar to \tc{lemmaScopesListSubset} but
-for the implication equation.
+% Liquid Haskell can check mostly automatically the refinement type signature of
+% \tc{unify}. In the equations for quantifiers, unfolding definitions of
+% \tc{scopes} plus the refinement type of the recursive calls suffices.
+% In the equation of conjunction, the theory of arrays of the SMT solver
+% kicks in to establish the first conjunct of the refinement type:
+
+% \begin{verbatim}
+% unionCommutes (scopes f1) (scopes f2)
+% =>
+% (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f1)) =>
+%   isSubsetOfJust
+%     (freeVars t)
+%     (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
+% &&
+% (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f2)) =>
+%   isSubsetOfJust
+%     (freeVars t)
+%     (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
+% \end{verbatim}
+
+% The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
+% in the refinement type of the input. The consequent relates the refinement types
+% of the recursive calls to the expected refinement type of the result, as Liquid
+% Haskell knows that \tc{IntMap.\allowbreak union (scopes f1) (scopes f2)} stands for
+% \tc{scopes (Conj f1 f2)}. An additional lemma is also needed to convince Liquid
+% Haskell that \tc{substituteSkolems} is going to preserve \tc{consistentSkolemScopes}.
+% This lemma relates the scopes of a substitution with the scopes in any map.
+% \begin{verbatim}
+% lemmaScopesListSubset
+%   :: m0:IntMap (Set Int)
+%   -> s:[(Var, {t:Term | intMapIsSubsetOf (scopesTerm t) m0})]
+%   -> { intMapIsSubsetOf (scopesList s) m0 }
+% \end{verbatim}
+% Here \tc{scopesList} is a function that collects the skolem scopes in a list of
+% pairs, and the lemma is instantiated with the scopes of the input formula.
+% \begin{verbatim}
+% unify s f@(Conj f1 f2) = do
+%     unifyF1 <- unify s f1
+%     let lemmaSubst = lemmaScopesListSubset (scopes f) unifyF1
+%     unifyF2 <- unify s (substituteSkolems (f2 ? lemmaSubst) unifyF1)
+%     return (unifyF1 ++ unifyF2)
+% \end{verbatim}
+% This lemma helps convince the SMT solver that the union of \tc{scopes f2}
+% and \tc{scopesList unifyF1} commutes, that is the scopes in the arguments of
+% \tc{substituteSkolems}, which is a necessary condition for ensuring that
+% \tc{consistentSkolemScopes} is preserved.
+
+% The second conjunct of the return refinement type of \tc{unify}
+% is accepted as it is established by the recursive calls and \tc{unifyEq}
+% as is. And the other equations in \tc{unify} are checked using similar reasoning,
+% all of it automatic except for a lemma similar to \tc{lemmaScopesListSubset} but
+% for the implication equation.
 
 
 \subsection{Extending Liquid Haskell to support \tc{IntMap}}
@@ -1588,6 +1597,7 @@ candidate to impact programming practice in the future.
 \end{document}
 
 % LocalWords:  invariants axiomatizes axiomatize integrations SMT subtyping
+% LocalWords:  equalities GADTs injective skolem postconditon
 
 % Local Variables:
 % ispell-local-dictionary: "american"
