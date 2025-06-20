@@ -1141,16 +1141,13 @@ However, in the case of Haskell, laziness lets us write
 \begin{verbatim}
 {-@ bad :: () -> { false } @-}
 bad :: () -> ()
-bad _ =
-  let
-    {-@ f :: { false } @-}
-    f = error "never happens"
-  in
-  ()
+bad _ = let {-@ f :: { false } @-}
+            f = error "never happens"
+         in ()
 \end{verbatim}
 Liquid Haskell wants to accept this function because \tc{f} appears to prove
 \tc{False}. In a strict language this wouldn't be a big problem as \tc{bad} would
-loop and any attempt at using \tc{false} would diverge. But \tc{bad} is
+loop and any attempt at using \tc{bad} would diverge. But \tc{bad} is
 actually a total function. Liquid Haskell rejects \tc{bad} because it fails to
 prove that \tc{f} is total, hence refuses to accept its signature.
 
@@ -1490,7 +1487,7 @@ of its users.
 
 On the performance front, all of the SMT-LIB queries in the unification example run
 in 9 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
-That is sometimes faster than it takes to compile the modules with the GHC compiler.
+That is sometimes faster than it takes to compile a modules with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell end-to-end, which spends several seconds checking the examples and interacting with the
 SMT solver (54 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
