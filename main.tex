@@ -1461,7 +1461,7 @@ substituteFormula
        && consistentSkolemScopes v
        && existsCount v = existsCount f
        && intMapIsSubsetOf (scopes v) (IntMap.union (scopes f) (scopesSubst s))
-     } / [formulaSize f]
+     }
 \end{verbatim}
 Besides the usual scope checks, we are checking that the size of the formula
 is preserved, that the amount of existential binders is preserved, and that
