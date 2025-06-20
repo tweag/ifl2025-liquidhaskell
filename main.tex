@@ -1255,22 +1255,29 @@ since we only substitute inside terms).
 \subsection{Extending Liquid Haskell to support \tc{IntMap}}
 \label{extending-liquid-haskell}
 
-When we started our study, Liquid Haskell didn't support using the SMT solver
-to reason with \tc{Map}s or \tc{IntMap}s.\footnote{Issue to support maps in the Liquid Haskell repository: \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}}
-In this section, we describe our modification to Liquid Haskell in order to address
-this problem. While we can still use Liquid Haskell without these
-changes, we would lose in automation. The tooling would require a lot more
-lemmas from the user to check that the code handles the maps as expected.
-All our modifications can be found in the files \tc{ifl25-\allowbreak liquidhaskell.patch}
-and \tc{ifl25-\allowbreak liquid-\allowbreak fix\-point.patch}.\footnote{Patches for
-liquidhaskell and liquid-fixpoint: \sourcefile{ifl25-liquidhaskell.patch} and
-\sourcefile{ifl25-liquid-fixpoint.patch}}
+Our unification case study uses the theory of finite maps. Liquid Haskell,
+however doesn't support a theory of finite map\footnote{Issue to support maps in
+  the Liquid Haskell repository:
+  \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}}. While it's
+certainly possible to do without (we have, at first, done most of this study in
+a vanilla Liquid Haskell), the code would be much more convoluted with a lot of
+lemmas to prove and pass around.
 
-We modified Liquid Haskell to leverage the SMT solver to reason with the type
-\tc{IntMap (Set Int)}. These modifications can be easily adapted to
-support other instantiations of \tc{Map a b} or \tc{IntMap b}, but a general
-solution that can be reused for any instantiation of the type parameters still
-needs to be implemented.
+So to support this study, we implemented the theory of finite map for Liquid
+Haskell. It's not in a mergeable state yet, for one thing we only support finite
+maps with \tc{Int} as their domain and \tc{Set Int} as their codomain. It could easily be adapted for any fixed
+domain and codomain types, but it's not yet a general solution that can be instantiated at any
+domain or codomain type. But our ultimate intent is to upstream these changes. Our
+modifications can be found in the files \tc{ifl25-\allowbreak
+  liquidhaskell.patch} and \tc{ifl25-\allowbreak liquid-\allowbreak
+  fix\-point.patch}.\footnote{Patches for liquidhaskell and liquid-fixpoint:
+  \sourcefile{ifl25-liquidhaskell.patch} and
+  \sourcefile{ifl25-liquid-fixpoint.patch}}.
+
+The theory of finite map is a good example of a theory that Liquid Haskell wants
+to support: it is both powerful, and widely applicable. Pragmatically, it's also
+one that is reasonably easy to support in most SMT solver by translating it to
+the theory of arrays.
 
 On the syntax front, Liquid Haskell allows to link a Haskell type with a particular
 representation in the SMT solver.
@@ -1285,10 +1292,10 @@ An array is an entity that associates keys with values, and which has an equalit
 and it is defined as one of the theories in SMT-LIB, the standard interface
 to SMT solvers~\cite{BarFT-RR-25}.
 The keys in this case are integers, and the values are either \tc{None} if the key
-is not in the map, or \tc{Some s} if the key maps to a set \tc{s}. We name the data type
-\tc{Option} to differentiated from Haskell's \tc{Maybe}, although both types are isomorphic.
-We do not name it the same because the framework to connect to the SMT solver is
-reused for other languages (e.g. \improvement{lehmann23}), and we prefer to keep
+is not in the map, or \tc{Some s} if the key maps to a set \tc{s}. The
+\tc{Option} type is a copy of Haskell's \tc{Maybe}.
+We do not reuse \tc{Maybe} as Liquid Haskell's framework to connect to the SMT solver is
+reused for other languages (\emph{e.g.} \cite{lehmann23}), and we prefer to keep
 the implementation free of language specific details.
 Here is the declaration of the \tc{Option} data type in SMT-LIB.
 
@@ -1612,7 +1619,8 @@ candidate to impact programming practice in the future.
 \end{document}
 
 % LocalWords:  invariants axiomatizes axiomatize integrations SMT subtyping
-% LocalWords:  equalities GADTs injective skolem postconditon
+% LocalWords:  equalities GADTs injective skolem postconditon instantiation
+% LocalWords:  mergeable codomain
 
 % Local Variables:
 % ispell-local-dictionary: "american"
