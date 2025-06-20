@@ -417,8 +417,8 @@ function that we use. So instead, we choose to assume the signature. This is our
 first principle of programming with refinement types:
 
 \begin{principle}
-  Refinement types permit a smaller trusted code base than
-  abstract types, but offer you a choice. When its easier to prove a result by
+  In general, refinement types allow to reduce the trusted code base, but they also offer
+    you a choice. When its easier to prove a result by
     hand than with the SMT solver, you should assume the property.\improvement{I feel
     this principle needs a discussion of unsafe coercions. Are unsafe coercions the
     way to assume properties with abstract types? Then they also offer a choice as
@@ -572,8 +572,11 @@ fresh variable call: the variable returned by \tc{withRefreshed} isn't in the
 old scope but is in the new scope.
 
 It then suffices to seal the type \tc{Scope} to enforce that binders are always
-refreshed when traversed.\change{Here we need a discussion of what sealing means,
-which could be the place to discuss the need for the Member predicate alias as well.}
+refreshed when traversed. The users are discouraged from manipulating directly
+the scope representation that we chose, so \tc{withRefreshed} remains the only
+way to test for membership and to extend a scope. This is why we define a
+\tc{Member} predicate alias, only available in the logic, but provide no
+\tc{member} function in Haskell for \tc{Scope}s.
 The full code for this example can be found in the
 file \tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
 
@@ -943,8 +946,7 @@ skolemize
 
 This type signature is, admittedly, a little bit involved. However while we were
 designing this case study, \tc{skolemize} stayed without a refined signature
-until pretty much the very end\unsure{I assume that you had a minimal assumed
-  signature}. This doesn't cause any problem as, due to refinement types'
+until pretty much the very end. This doesn't cause any problem as, due to refinement types'
 inherent subtyping, it's easy to use unrefined and refined functions together.
 Of course this prevented us from having guarantees for the program end-to-end,
 but it's often enough add guarantees only where you need them. What you choose
@@ -974,8 +976,13 @@ The main conjuncts of the postconditon are \tc{consistentSkolemScopes v} and
   formula $F$ such that all the occurrences of any unification variable $i$ in $F$
   have the same scope. This is our main scope invariant for this section.
 \end{itemize}
-\unsure{I removed the paragraph on stuff hanging. Maybe we want to discuss this
-  limitation in the conclusion}
+
+Incidentally, we found that Liquid Haskell hangs when checking the \tc{Exists}
+case of \tc{skolemize}. By resorting to the principle of only checking what is
+cost-effective, we disabled checking for that specific case, while we still verify
+the rest of the function.
+\unsure{Arnaud removed the paragraph on stuff hanging. Maybe we want to discuss this
+  limitation in the conclusion. Facundo added a rephrasing of it again here.}
 
 % We won't discuss the checking process for this function, as examples follow
 % which  don't require the burden of explaining the mechanisms for
@@ -1046,7 +1053,7 @@ be translated to a theory of the SMT solver rather than a complex formula. Which
 constitutes our next principle.
 
 \begin{principle}
-  SMT solvers are at their more effective when they can leverage their theories.
+  SMT solvers are more effective when they can leverage their theories.
   Prefer writing refinement types by appealing to theories known by your system.
 \end{principle}
 
@@ -1087,11 +1094,8 @@ lemmaSubstituteScopesTerm s (V v) = case lookupSubst s v of
     _ -> ()
 \end{verbatim}
 
-The proof uses itself another lemma, which we've assume in keeping with the principle of only
-proving what provides value.
-\unsureF{We could say a bit more here: as we regard the Subst implementation fungible/repleaceable
-we don't want to be in the business of proving lemmas about it. Instead, the assumptions describe
-the behavior (contract?) that we expect from it.}
+The proof uses itself another lemma, which establishes a property on substitutions,
+and therefore it is assumed as another expectation we have of their implementation.
 
 \begin{verbatim}
 assume lemmaComposeSubstDomain
