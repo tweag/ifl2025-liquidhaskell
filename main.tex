@@ -105,22 +105,19 @@
 
 \begin{document}
 \begin{abstract}
-    \change{Remember to make a pass on this abstract before submission}
-    This paper explores the use of Satisfiability Modulo Theories (SMT) solvers,
-    specifically through Liquid Haskell, to enhance static checks of
-    programming language interfaces. Traditional approaches in strongly typed
-    languages balance type richness with interface usability. We present a
-    third alternative: leveraging SMT solvers via refinement types to offload
-    static checks from the type checker. Our study includes a comparative
-    analysis of capture-avoiding substitution, demonstrating the advantages of
-    Liquid Haskell over type-checker-based methods. Furthermore, we investigate
-    the application of SMT solvers to unification, a more complex scenario,
-    highlighting both the capabilities and current limitations of this
-    approach. We showcase modifications to Liquid Haskell to support these
-    advanced checks, demonstrating technical feasibility. The paper also
-    argues for the broad applicability of SMT solvers in ensuring various
-    program properties, suggesting that their integration can significantly
-    improve both the power and convenience of static checks in programming.
+    This paper advocates for the broader application of SMT solvers in everyday
+    programming, challenging the conventional wisdom that these tools are
+    solely for formal methods and verification. We claim that SMT solvers, when
+    seamlessly integrated into a compiler's static checks, significantly
+    enhance the capabilities of ordinary type checkers in program composition.
+    Specifically, we argue that refinement types, as embodied by Liquid Haskell,
+    enable the use of SMT solvers in mundane programming tasks.
+
+    Through a case study on handling binder scopes in compilers, we envision a
+    future where ordinary programming is made simpler and more enjoyable with the
+    aid of refinement types and SMT solvers. As a secondary contribution, we
+    present a prototype implementation of a theory of finite maps for Liquid
+    Haskell's solver, developed to support our case study.
 \end{abstract}
 \maketitle
 
