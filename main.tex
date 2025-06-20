@@ -97,7 +97,7 @@
 
 \newcommand{\tc}[1]{{\small\texttt{#1}}}
 \newcommand{\codeblocksize}{\fontsize{6.5}{9}\selectfont}
-\newcommand{\sourcefile}[1]{\anon[#1 (in the attached artifact)]{{\scriptsize\url{https://github.com/facundominguez/liquidhaskell/blob/fd/rapier/tests/rapier/#1}}}}
+\newcommand{\sourcefile}[1]{\anon[#1 (in the attached artifact) to be replaced with a link when non-anonymized]{{\scriptsize\url{https://github.com/facundominguez/liquidhaskell/blob/fd/rapier/tests/rapier/#1}}}}
 \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
     fontsize=\codeblocksize,
 }
@@ -160,11 +160,11 @@ Section~\ref{extending-liquid-haskell}.
 Binding scope management is recognized as a persistent annoyance when writing compilers.
 It's easy to get wrong and is a source of mistake to the point that many have
 proposed disciplines to prevent mismanagement of scopes, like name capture.
-The poster child is substitution like in
+The poster child is substitution, like in
 $(\lambda x. y)[y:=t]$. The result of this substitution is $\lambda x. t$.
 Thus $(\lambda x. y)[y:=x]$ is $\lambda x. x$. An easy mistake!
 
-Compiler authors have proposed many discipline to help make scope more
+Compiler authors have proposed many disciplines to help make scope more
 manageable.
 The GHC Haskell compiler, for instance, uses an approach to avoid name capture called
 \textit{the rapier}~\cite{peytonjones02secrets}. All term-manipulating functions
@@ -204,7 +204,7 @@ freshVar s = case lookupMax s of Nothing -> 0; Just i -> i + 1
 
 The rapier wasn't enough, however, for \citet{maclaurin23} who report that
 despite using the rapier they struggled with frequent scope issues in their
-compiler. They set out to, enforce the scope properties of the rapier with
+compiler. They set out to enforce the scope properties of the rapier with
 Haskell's type system. A stunt that has often been attempted, but
 \cite{maclaurin23}'s approach, that they name \emph{the foil}, is probably the
 first to succeed at enforcing such invariants without incurring an unreasonable
@@ -246,7 +246,7 @@ data Exp n = Var (Name n)
 \end{quotation}
 
 Then the operations and type checking on the new types will guide the user into
-respecting much of the scope requirements when implementing substitution.
+respecting the scope requirements when implementing substitution.
 
 \begin{verbatim}
 substitute :: Distinct o => Scope o -> Subst Expr i o -> Expr i -> Expr o
@@ -307,11 +307,11 @@ provided by the programmer. There are two key differences between Liquid Haskell
 signature checking and a classical type checker:
 
 \begin{itemize}
-  \item The checking process consists in generating logical assumptions which
-        are then fed to an SMT solver, leveraging the powerful
+  \item The checking process consists in generating logical constraints or proof
+        obligations which are then fed to an SMT solver, leveraging the powerful
         capabilities of SMT solvers to reason about numbers, arrays, strings, etc…
   \item Signatures are expressed with \emph{refinement types} of the form
-        \tc{\{x:b | p\}}, which denotes values of type
+        \tc{\{x:b | p\}}, which denote values of type
         base type \tc{b} that satisfy predicate \tc{p}.
         Refinements are subject to subtyping in the same way as subsets in set
         theory, so that we have
@@ -342,12 +342,13 @@ assume member :: Ord a
 \end{verbatim}
 Refinement type signatures starting with the \tc{assume} keyword declare that the
 corresponding Haskell function honors the signature, but it isn't
-checked. In this case it's because \tc{Data.Set} is an external dependency that
+checked. In this case, it's because \tc{Data.Set} is an external dependency that
 Liquid Haskell can't check. But it can also be applied to our own functions.
 
 Here \tc{Set\_mem} is a symbol that Liquid Haskell maps to the theory
-of sets in the SMT solver. While that \tc{member} verifies this signature isn't
-checked, Liquid Haskell will assume the property in the return refinement type
+of sets in the SMT solver. While Liquid Haskell doesn't check that
+\tc{member} behaves as declared in the refinement type signature,
+it will assume the property in the return refinement type
 whenever \tc{member} is used in a program.
 
 Notice how the predicate on the return type mentions both arguments. Liquid
@@ -371,7 +372,7 @@ definition. It would look like this
 measure listElts :: [a] -> Set a
 \end{verbatim}
 The meaning of the function would then be given by \tc{assume} refinement
-signature on other functions.
+type signatures on other functions.
 
 
 \subsection{The rapier, refined}
@@ -379,7 +380,7 @@ signature on other functions.
 
 We would, now, like to argue that using Liquid Haskell to enforce the
 requirements from Section~\ref{the-rapier-with-stronger-types} is more
-straightforward than using the type system. The code presented in this section is available in the file
+straightforward than using the type checker alone. The code presented in this section is available in the file
 \tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
   \sourcefile{Subst1.hs}}
 
@@ -451,7 +452,7 @@ assume extendSubst
   :: s:Subst a
   -> i:Int
   -> a
-  -> {v:_ | union (domain s) (singleton i) = domain v }
+  -> {v:Subst a | union (domain s) (singleton i) = domain v }
 \end{verbatim}
 \unsureF{Note that lookupSubst has a different type in the implementation now.
 \tc{f :: forall <p :: Exp -> Bool>. Subst Exp<p> -> {k:Int | member k (domain s)} -> Exp<p>}
@@ -503,7 +504,7 @@ extending a scope. This is our next principle:
 \end{principle}
 
 The type of lambda terms is also unchanged, as the well-scoping invariant is
-applied to a whole term at once. A nice consequence of that is that functions
+applied to a whole term at once. A nice consequence of it is that functions
 that don't benefit from all the scope checking business can simply take a naked
 term and ignore it. The \tc{freeVars} function, for example, is implemented on
 naked terms.\unsure{I'm considering adding a comment on the fact that we can use
@@ -716,7 +717,7 @@ don't want this unification problem to succeed\improvement{I think we should
   use a better notation to distinguish unification variables from rigid
   variables.}: we shall make it so that $y$ isn't in the permissible scope for $f_{x}$.
 
-Furthermore, the unification algorithm will perform substitutions, substitutions are blocked by
+Furthermore, the unification algorithm will perform substitutions. Substitutions are blocked by
 unification variables as we don't know what they stand for yet. So a unification
 variable, in our syntax, is a pair $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ of a
 unification variable proper and a suspended substitution. Where
@@ -751,7 +752,7 @@ be and will miss some solutions\footnote{We have, on the other hand, tried to
 At the heart of the algorithm is substitution inversion~\cite{ziliani15}: when
 encountering an equality of the form
 $$(f_{x},[y:=a, z:=b]) = u$$
-We want the solution (if there is one, there are some conditions) to be
+If there is a solution, we want it to be
 $$f_{x} := u[a:=y, b:=z]$$
 This is the same as pattern unification, except that it doesn't need terms to
 contain functions. The \tc{inverseSubst} function is responsible for this
@@ -760,7 +761,7 @@ inversion.
 We're choosing a language of term with both regular variable (representing
 variables bound by universal quantifiers), skolem applications representing
 unification variables with their substitutions, as well as sufficient
-constructor to encode arbitrary terms. Here is the concrete type of term, as
+constructors to encode arbitrary terms. Here is the concrete type of term, as
 well as that of formula where the only thing to remark is that the left-hand
 side of implications is a single equality.
 
@@ -788,14 +789,14 @@ In a preceding pass (Section~\ref{sec:skolemize}), existential quantifiers are r
 with skolem applications, so in \tc{unify} we assume that there is no
 existential quantifier. We have functions \tc{substituteFormula} and \tc{substitute}
 to apply substitutions in formulas and terms respectively, and \tc{substituteSkolems} to  substitute
-skolems in formulas. We have a function \tc{skolemSet} to collect the skolems of a
+unification variables in formulas. We have a function \tc{skolemSet} to collect the skolem applications of a
 term. And a function \tc{fromListSubst} to construct a substitution from a list of
 pairs \tc{[(Var, Term)]}.
 
 The functions \tc{substEq} and \tc{unifyEq} are simplified here to their barest
-essence (in particular \tc{unifyEq} never fails in this simple form, it can fail
-in the artifact). They handle more cases in the accompanying artifact, but these
-cases aren't essential to our discussion.
+essence. In particular, \tc{unifyEq} never fails in this simple form. They handle
+more cases in the accompanying artifact, but these cases aren't essential to our
+discussion.
 
 \begin{figure}
 \begin{verbatim}
@@ -944,13 +945,13 @@ skolemize
      / [formulaSize f]
 \end{verbatim}
 
-This type signature is, admittedly, a little bit involved. However while we were
+This type signature is, admittedly, a bit involved. However while we were
 designing this case study, \tc{skolemize} stayed without a refined signature
-until pretty much the very end. This doesn't cause any problem as, due to refinement types'
-inherent subtyping, it's easy to use unrefined and refined functions together.
+until pretty much the very end. This is possible because the inherent subtyping
+of refinement types makes it easy to use unrefined and refined functions together.
 Of course this prevented us from having guarantees for the program end-to-end,
-but it's often enough add guarantees only where you need them. What you choose
-to harden will not have to infect the rest of our program.
+but it is fine to add guarantees only where you need them. What you choose
+to harden will not have to infect the rest of the program.
 Which leads us to our next principle
 
 \begin{principle}
@@ -966,12 +967,12 @@ the meantime, it can be found in Liquid Haskell's test suite, so we simply
 copied it in our artifact\footnote{Refinement type support
   for the State monad: \sourcefile{State.hs}}.
 
-The main conjuncts of the postconditon are \tc{consistentSkolemScopes v} and
+The main conjuncts of the postconditon are \tc{consistent\-Skolem\-Scopes v} and
 \tc{existsCount v = 0}, the rest are invariants used by the recursive calls of
 \tc{skolemize}.
 \begin{itemize}
   \item \tc{existsCount v = 0} means that \tc{skolemize} returns a formula without
-  existential quantifier. As it is a requirement of \tc{unify}.
+  existential quantifiers. As it is a requirement of \tc{unify}.
   \item \tc{consistentSkolemScopes v} means that \tc{skolemize} returns a
   formula $F$ such that all the occurrences of any unification variable $i$ in $F$
   have the same scope. This is our main scope invariant for this section.
@@ -995,8 +996,9 @@ the rest of the function.
 \subsection{The theory of \tc{unifyEq}}
 \label{checking-unifyEq}
 
-Let us now turn to the \tc{UnifyEq} function, which is a traditional unification
-function: it takes an equation and returns an identifier. It is simplified to
+Let us now turn to the \tc{unifyEq} function, which is a traditional unification
+function: it takes an equation and returns a list of unifications.
+It is simplified to
 never fail for conciseness, but it can indeed fail in the artifact.
 
 We start introducing static checks by providing a refinement type signature to
@@ -1048,7 +1050,7 @@ value in both. This is the binary version of our
 \tc{consistent\-SkolemScopesTerm} predicate. The statement is a bit indirect,
 but that's for a good reason. Since our version of Liquid Haskell understands
 the theory of finite maps over integers
-(Section~\ref{extending-liquid-haskell}), means that this statement is going to
+(Section~\ref{extending-liquid-haskell}), this statement is going to
 be translated to a theory of the SMT solver rather than a complex formula. Which
 constitutes our next principle.
 
@@ -1148,20 +1150,20 @@ However, in the case of Haskell, laziness lets us write
 bad :: () -> ()
 bad _ = let {-@ f :: { false } @-}
             f = error "never happens"
-         in ()
+         in (\_ -> ()) f
 \end{verbatim}
-Liquid Haskell wants to accept this function because \tc{f} appears to prove
-\tc{False}. In a strict language this wouldn't be a big problem as \tc{bad} would
-loop and any attempt at using \tc{bad} would diverge. But \tc{bad} is
+It may seem that Liquid Haskell could accept this function because \tc{f} appears
+to prove \tc{false}. In a strict language this wouldn't be a big problem as
+\tc{bad} would loop and any attempt at using \tc{bad} would diverge. But \tc{bad} is
 actually a total function. Liquid Haskell rejects \tc{bad} because it fails to
 prove that \tc{f} is total, hence refuses to accept its signature.
 
 This is also why the signature of \tc{unify} ends with \tc{/ [formulaSize f]}.
 Liquid Haskell needs to prove that \tc{unify} terminates and, because of the
-substitutions, \tc{unify} isn't a structurally recursive function, so Liquid
-Haskell needs a little help in the form of a termination metric (here the number
-of connectives in the argument formula, which is unaffected by substitution
-since we only substitute inside terms).
+substitutions, \tc{unify} isn't a structurally recursive function. So Liquid
+Haskell needs a little help in the form of a termination metric. We use here
+the number of connectives in the argument formula, which is unaffected by
+substitution since we only substitute inside terms.
 
 % The recursion of unify is not structural since in the conjunction and implications
 % cases we are not feeding subformulas. Therefore we provide a termination
@@ -1243,14 +1245,14 @@ since we only substitute inside terms).
 \label{extending-liquid-haskell}
 
 Our unification case study uses the theory of finite maps. Liquid Haskell,
-however doesn't support a theory of finite map\footnote{Issue to support maps in
+however doesn't support a theory of finite maps\footnote{Issue to support maps in
   the Liquid Haskell repository:
-  \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}}. While it's
-certainly possible to do without (we have, at first, done most of this study in
-a vanilla Liquid Haskell), the code would be much more convoluted with a lot of
-lemmas to prove and pass around.
+  \url{https://github.com/ucsd-progsys/liquidhaskell/issues/2534}}. It is
+possible to do without it. In a first approximation we did much of this study in
+vanilla Liquid Haskell. But we lost on automation: the code was more convoluted,
+and we got a lot of lemmas to prove and pass around.
 
-So to support this study, we implemented the theory of finite maps for Liquid
+To support this study, we implemented the theory of finite maps for Liquid
 Haskell. It's not in a mergeable state yet, for one thing: we only support finite
 maps with \tc{Int} as their domain and \tc{Set Int} as their codomain. It could easily be adapted for any fixed
 domain and codomain types, but it's not yet a general solution that can be instantiated at any
@@ -1364,15 +1366,15 @@ preamble once and for all queries.
 \label{SMT-solvers-for-interface-checks}\label{limitations-of-liquid-haskell}
 
 The substitution case study of Section~\ref{capture-avoiding-substitution}
-allows for a direct comparison between type methods and refinement methods. We
+allows for a direct comparison between type methods and refinement type methods. We
 can see that the trusted code base of the Liquid Haskell version of
 Section~\ref{the-rapier-with-refinement-types} is quite small compared to that
 of the foil~\cite{maclaurin23} (reviewed in
-Section~\ref{the-rapier-with-stronger-types}). This is in large part due to the
-fact that because refinement types can enforce invariants without the need for
-abstract types, and such an open interface can be extended in user-space.
+Section~\ref{the-rapier-with-stronger-types}). This is in large part
+because refinement types can enforce invariants without the need for
+abstract types, and such an open interface can be extended by the user.
 Contrast with the abstract-type approach where you have to design, upfront, a
-set of invariant-preserving operation sufficient to express downstream programs.
+set of invariant-preserving operations sufficient to express downstream programs.
 None of these functions will benefit from the abstract types invariant, hence
 will be part of the trusted code base. Even when we mix refinement and abstract
 types as in Section~\ref{ensuring-the-scope-set-is-checked}, we don't have quite
@@ -1385,9 +1387,9 @@ Section~\ref{ensuring-the-scope-set-is-checked}.
 When the invariants of a program naturally involve mathematical objects such as
 arithmetic or sets, refinement types are likely to be more approachable,
 requiring less careful a design than coming up with an encoding inside and
-ML-like type system. On the other hand when a program needs a theory that Liquid
+ML-like type system. On the other hand, when a program needs a theory that Liquid
 Haskell, say, doesn't have support for, it may not be that clear and the program
-author may need to mobilize comparable effort for refinement type as she would
+author may need to mobilize comparable effort for refinement types as she would
 have for an abstract-type encoding.
 
 The type-checker approach, however, is likely to produce error messages that
@@ -1401,7 +1403,7 @@ insufficient to prove the goal? The user has to compute it on her own too,
 although it is plausible that counterexamples or better location information~\cite{webbers24}
 can be offered when the tooling matures.
 
-As an example, let us consider the lemma \tc{lemmaSubstituteScopesTerm} discussed in
+As an example, let us consider the lemma \tc{lemma\-Substitute\-Scopes\-Term} discussed in
 Section~\ref{checking-unifyEq}.
 If we drop this lemma from the definition of \tc{unifyEq}, we get the following
 error message (heavily edited for presentation):
@@ -1427,7 +1429,8 @@ tests/rapier/Unif.hs:570:7: error:
                consistentSkolemScopesTerm t0 && t0 == SA (i, s)}
 
       s' : {s' : Subst Term |
-               Just s' == inverseSubst (narrowForInvertibility (freeVars t1) s)
+               inverseSubst (narrowForInvertibility (freeVars t1) s)
+                 == Just s'
             && consistentSkolemScopesTerm (substitute s' t1)}
 
       i : {i : Int | not (Set.member i (skolemSet (substitute s' t1)))}
@@ -1456,7 +1459,7 @@ IntMapSetInt_isSubsetOf
   (scopesTerm (substitute s' t1))
   (IntMap.union (scopesTerm t0) (scopesTerm t1))
 \end{verbatim}
-And now is time to ponder whether this is true and, if so, why. It turns out that
+And now it is time to ponder whether this is true and, if so, why. It turns out that
 if the function \tc{substitute} preserves the unification scopes of \tc{t1}, like
 in
 \begin{verbatim}
@@ -1475,9 +1478,9 @@ stronger postconditions for the result of the recursive calls.
 
 Maybe relatedly, the maturity of refinement type checkers in general, and Liquid
 Haskell in particular, is rather lacking still. We have encountered a
-non-trivial number of bugs and user-experience defects while conducting our
+non-negligible number of bugs and user-experience defects while conducting our
 study. Our artifact contains comments explaining the bugs where we were
-affected. Thankfully none of the bugs that we found look really difficult to
+affected. Thankfully, none of the bugs that we found look really difficult to
 fix, but they do have a severe impact on user experience in aggregate.
 
 Besides, Liquid Haskell lacks support for many standard features of Haskell.
@@ -1492,10 +1495,10 @@ of its users.
 
 On the performance front, all of the SMT-LIB queries in the unification example run
 in 9 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
-That is sometimes faster than it takes to compile a modules with the GHC compiler.
+That is sometimes faster than it takes to compile a module with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell end-to-end, which spends several seconds checking the examples and interacting with the
-SMT solver (54 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
+SMT solver (54 seconds when checking unification, 4 seconds checking \tc{Subst2.hs},
 1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
 can be improved to approach that of the SMT solver queries, and probably further by
 reducing the amount of queries.
@@ -1573,13 +1576,17 @@ is that one needs to narrow the expressible properties to a feasible set that al
 to write a supporting library. If we wanted to have static checks like those of the
 unification example, we would need new type encodings. Or in other words, new type indices
 need to be conceived to relate the parameters of our functions.
-$$\mathit{skolemize} :: \mathit{Scope}\ s_1 \ldots s_n \rightarrow \mathit{Formula}\ f_1 \ldots f_j \rightarrow \mathit{State} t_1 \ldots t_k (\mathit{Scope}\ e_1 \ldots e_l) (\mathit{Formula}\ o_1 \ldots o_m)]$$
+
+\begin{quotation}
+$\mathit{skolemize} ::$ $\mathit{Scope}\ s_1 \ldots s_n \rightarrow$ $\mathit{Formula}\ f_1 \ldots f_j \rightarrow$\\
+$\mathit{State}\ t_1 \ldots t_k\ (\mathit{Scope}\ e_1 \ldots e_l)\ (\mathit{Formula}\ o_1 \ldots o_m)$
+\end{quotation}
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
 is needed. Suppose we started with the static checks to avoid name captures as in
 Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
-required to deal with unification variables. With refinement types we need to add
+required to deal with unification variables. With refinement types we only need to add
 the corresponding conjuncts to the refinement types.
 
 \begin{verbatim}
@@ -1611,8 +1618,8 @@ the consistency of the unification scopes.
 \section{Conclusions}
 \label{conclusions}
 
-The tooling isn't ready for widespread use. Yet it's plausible that a decently
-close future, we have access to SMT- and refinement-types to assist us in
+The tooling isn't ready for widespread use. Yet it is plausible that in a decently
+close future, we have access to SMT solvers and refinement-types to assist us in
 our programming.
 
 Refinement types enable a more direct expression of properties,
@@ -1627,7 +1634,7 @@ candidate to impact programming practice in the future.
 
 Through our two case studies, we have tried to make a first step in
 understanding how we will be best able to leverage future such tools, even
-in situation where we can manage to use current typecheckers today. As a closing
+in situations where we can manage to use current typecheckers today. As a closing
 note, let us reproduce the principles that we've proposed throughout the article.
 
 \vspace{-0.8cm}
