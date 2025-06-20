@@ -23,5 +23,4 @@ cabal build liquid-prelude
 # run liquidhaskell on the example files
 time cabal exec -- ghc -fforce-recomp -fplugin=LiquidHaskell examples/Subst1.hs
 time cabal exec -- ghc -fforce-recomp -fplugin=LiquidHaskell examples/Subst2.hs
-time cabal exec -- ghc -fforce-recomp -fplugin=LiquidHaskell examples/Subst3.hs
 time cabal exec -- ghc -fforce-recomp -fplugin=LiquidHaskell examples/Unif.hs examples/State.hs
