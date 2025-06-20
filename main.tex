@@ -798,7 +798,7 @@ and the substitution needs to rename the inner binder $x$.
 In a preceding pass (Section~\ref{sec:skolemize}), existential quantifiers are replaced
 with skolem applications, so in \tc{unify} we assume that there is no
 existential quantifier. We have functions \tc{substituteFormula} and \tc{substitute}
-to apply substitutions in formulas and terms respectively, \tc{substituteSkolems} to  substitute
+to apply substitutions in formulas and terms respectively, and \tc{substituteSkolems} to  substitute
 skolems in formulas. We have a function \tc{skolemSet} to collect the skolems of a
 term. And a function \tc{fromListSubst} to construct a substitution from a list of
 pairs \tc{[(Var, Term)]}.
@@ -806,7 +806,7 @@ pairs \tc{[(Var, Term)]}.
 The functions \tc{substEq} and \tc{unifyEq} are simplified here to their barest
 essence (in particular \tc{unifyEq} never fails in this simple form, it can fail
 in the artifact). They handle more cases in the accompanying artifact, but these
-case aren't essential to our the discussion in this article.
+cases aren't essential to our discussion.
 
 \begin{figure}
 \begin{verbatim}
@@ -971,7 +971,7 @@ Which leads us to our next principle
   incrementally add stronger types on more functions as your program evolves.
 \end{principle}
 
-Liquid Haskell helpfully lets us treat the state monad has being equipped with
+Liquid Haskell helpfully lets us treat the state monad as equipped with
 Hoare triples \tc{State<pre,post>}. The supporting code for the refined state
 monad is not readily available in Liquid Haskell. It probably should be, but in
 the meantime, it can be found in Liquid Haskell's test suite, so we simply
@@ -979,14 +979,14 @@ copied it in our artifact\footnote{Refinement type support
   for the State monad: \sourcefile{State.hs}}.
 
 The main conjuncts of the postconditon are \tc{consistentSkolemScopes v} and
-\tc{existsCount v = 0}, the rest are invariant used by the recursive calls of
+\tc{existsCount v = 0}, the rest are invariants used by the recursive calls of
 \tc{skolemize}.
 \begin{itemize}
   \item \tc{existsCount v = 0} means that \tc{skolemize} returns a formula without
-  existential quantifier. As is a requirement of \tc{unify}.
+  existential quantifier. As it is a requirement of \tc{unify}.
   \item \tc{consistentSkolemScopes v} means that \tc{skolemize} returns a
   formula $F$ such that all the occurrences of any unification variable $i$ in $F$
-  has the same scope. This is our main scope invariant for this section.
+  have the same scope. This is our main scope invariant for this section.
 \end{itemize}
 \unsure{I removed the paragraph on stuff hanging. Maybe we want to discuss this
   limitation in the conclusion}
@@ -1048,7 +1048,7 @@ We would like to draw the reader's attention to the precondition
 \begin{verbatim}
 unionCommutes (scopesTerm t0) (scopesTerm t1)
 \end{verbatim}
-The \tc{unionCommutes m1 m2} predicates states that \tc{union m1 m2 = union m2
+The \tc{unionCommutes m1 m2} predicate states that \tc{union m1 m2 = union m2
   m1}, which in turn, because \tc{union} is the left-biased union of maps,
 means that any key defined in both \tc{m1} and \tc{m2} have the same associated
 value in both. This is the binary version of our
@@ -1102,6 +1102,9 @@ lemmaSubstituteScopesTerm s (V v) = case lookupSubst v s of
 
 The proof uses itself another lemma, which we've assume in keeping with the principle of only
 proving what provides value.
+\unsureF{We could say a bit more here: as we regard the Subst implementation fungible/repleaceable
+we don't want to be in the business of proving lemmas about it. Instead, the assumptions describe
+the behavior (contract?) that we expect from it.}
 
 \begin{verbatim}
 assume lemmaComposeSubstDomain
@@ -1114,7 +1117,7 @@ assume lemmaComposeSubstDomain
 \label{checking-unify}
 
 There is not much more to add for the \tc{unify} function, but let us take this
-opportunity to talk about totality requirement. Here is its signature.
+opportunity to talk about the totality requirement. Here is its signature.
 
 \begin{verbatim}
 unify
@@ -1139,25 +1142,25 @@ precondition so that Liquid Haskell can prove that this case never occurs.
 This totality requirement isn't necessary to refinement types in general.
 However, in the case of Haskell, laziness lets us write
 \begin{verbatim}
-{-@ bad :: () -> { _ :: () | True = False } @-}
-bad :: () -> { _ :: () | True = False }
+{-@ bad :: () -> { false } @-}
+bad :: () -> ()
 bad _ =
   let
-    {-@ f :: { _ :: () | False } @-}
+    {-@ f :: { false } @-}
     f = error "never happens"
   in
   ()
 \end{verbatim}
 Liquid Haskell wants to accept this function because \tc{f} appears to prove
 \tc{False}. In a strict language this wouldn't be a big problem as \tc{bad} would
-loop and any attempt at using \tc{True = False} would diverge. But \tc{bad} is
+loop and any attempt at using \tc{false} would diverge. But \tc{bad} is
 actually a total function. Liquid Haskell rejects \tc{bad} because it fails to
 prove that \tc{f} is total, hence refuses to accept its signature.
 
 This is also why the signature of \tc{unify} ends with \tc{/ [formulaSize f]}.
 Liquid Haskell needs to prove that \tc{unify} terminates and, because of the
 substitutions, \tc{unify} isn't a structurally recursive function, so Liquid
-Haskell need a little help in the form of a termination metric (here the number
+Haskell needs a little help in the form of a termination metric (here the number
 of connectives in the argument formula, which is unaffected by substitution
 since we only substitute inside terms).
 
@@ -1511,7 +1514,7 @@ tests/rapier/Unif.hs:570:7: error:
     in the context
       t1 : {t1 : Term |
                consistentSkolemScopesTerm t1
-            && UnionCommutes (scopesTerm t0) (scopesTerm t1)}
+            && unionCommutes (scopesTerm t0) (scopesTerm t1)}
 
       s : {s : Subst Term |
              isSubsetOf (freeVars (substitute s' t1)) (domain s)}
