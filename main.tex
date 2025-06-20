@@ -1381,7 +1381,7 @@ This is not to mean that refinement types are superior to type abstractions.
 They are best at enforcing different types of invariants, as discussed in
 Section~\ref{ensuring-the-scope-set-is-checked}.
 
-When the invariants of a program naturally involved mathematical objects such as
+When the invariants of a program naturally involve mathematical objects such as
 arithmetic or sets, refinement types are likely to be more approachable,
 requiring less careful a design than coming up with an encoding inside and
 ML-like type system. On the other hand when a program needs a theory that Liquid
@@ -1390,7 +1390,7 @@ author may need to mobilize comparable effort for refinement type as she would
 have for an abstract-type encoding.
 
 The type-checker approach, however, is likely to produce error messages that
-are easier both to understand to fix, provided that the user goal is feasible.
+are easier both to understand and to fix, provided that the user goal is feasible.
 The user is guided into correcting the errors
 by the types and the operations of the supporting library. With SMT solvers,
 there is always the question of whether a goal is provable or not in the
@@ -1481,7 +1481,7 @@ fix, but they do have a severe impact on user experience in aggregate.
 
 Besides, Liquid Haskell lacks support for many standard features of Haskell.
 In our code we have been using the simplest possible style of programming.
-There are no GADTs, no type families, not even type classes (though
+There are no GADTs, no type families, and minimal use of type classes (since
 Liquid Haskell has some support for type classes~\cite{liu20}). At the moment,
 pushing for more demanding programming patterns is likely to surface more
 inconveniences. Aiming for the simplest style is, therefore, a pragmatic constraint of
@@ -1490,11 +1490,11 @@ Gamboa et al.~\cite{gamboa25} report on a study that collects the voices
 of its users.
 
 On the performance front, all of the SMT-LIB queries in the unification example run
-in 6 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
+in 9 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
 That is sometimes faster than it takes to compile the modules with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell end-to-end, which spends several seconds checking the examples and interacting with the
-SMT solver (37 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
+SMT solver (54 seconds checking unification, 4 seconds checking \tc{Subst2.hs},
 1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
 can be improved to approach that of the SMT solver queries, and probably further by
 reducing the amount of queries.
