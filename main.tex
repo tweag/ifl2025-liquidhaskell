@@ -1440,27 +1440,34 @@ $$\mathit{unify} :: \mathit{Formula}\ f_1 \ldots f_n -> [(\mathit{Var}\ v_1 \ldo
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
-is needed. Suppose we wanted to check in the unification example that the
-function to apply substitutions passes the static checks of
-Section~\ref{capture-avoiding-substitution}. With
-refinement types we need to add the corresponding conjuncts to the predicates.
+is needed. Suppose we started with the static checks to avoid name captures as in
+Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
+required to deal with unification variables. With refinement types we need to add
+the corresponding conjuncts to the refinement types.
 
 \begin{verbatim}
-- substituteFormula
--   :: Set Int
--   -> Subst Term
--   -> f:Formula
--   -> {v:Formula | formulaSize f == formulaSize v}
--
-+ type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
-+ type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
-+
-+ substituteFormula
-+   :: scope:Set Int
-+   -> s:Subst (ScopedTerm scope)
-+   -> f:ScopedFormula (domain s)
-+   -> {v:ScopedFormula scope | formulaSize f == formulaSize v}
+type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
+type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
+
+substituteFormula
+  :: scope:Set Int
+  -> s:Subst (ScopedTerm scope)
+  -> {f:ScopedFormula (domain s) |
+           consistentSkolemScopes f
+        && UnionCommutes (scopes f) (scopesSubst s)
+     }
+  -> {v:ScopedFormula scope |
+          formulaSize f == formulaSize v
+       && consistentSkolemScopes v
+       && existsCount v = existsCount f
+       && intMapIsSubsetOf (scopes v) (IntMap.union (scopes f) (scopesSubst s))
+     } / [formulaSize f]
 \end{verbatim}
+Besides the usual scope checks, we are checking that the size of the formula
+is preserved, that the amount of existential binders is preserved, and that
+the unification scopes in the output are those in the input formula and in
+the range of the substitution. We also check that substitution preserves
+the consistency of the unification scopes.
 
 Less planning and setup seems necessary when composing refinement types, and
 then we can hope SMT solvers to continue to check the same constraints
