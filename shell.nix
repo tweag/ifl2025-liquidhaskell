@@ -11,6 +11,8 @@ pkgs.mkShell {
           latexmk
           scheme-small
           xdvi
+          keytheorems
+          translations
 
           # acmart dependencies
           amscls

@@ -2,6 +2,7 @@
 \citestyle{acmnumeric}
 \usepackage[utf8]{inputenc}
 \usepackage{fancyvrb}
+\usepackage[store-all]{keytheorems}
 
 %%%%%%%%%%%%%%%%% Editing marks %%%%%%%%%%%%%%%%%
 
@@ -1610,27 +1611,32 @@ the consistency of the unification scopes.
 \section{Conclusions}
 \label{conclusions}
 
-We have presented two case studies to contrast the use of SMT solvers
-with more traditional approaches based on type checking with strong types. In
-our analysis, we tested the ability of SMT solvers to effectively automatize
-the static checks otherwise left to the type system.
+The tooling isn't ready for widespread use. Yet it's plausible that a decently
+close future, we have access to SMT- and refinement-types to assist us in
+our programming.
 
-We found that refinement types enable a direct expression of properties,
+Refinement types enable a more direct expression of properties,
 particularly when the SMT solver supports the relevant theories. Reasoning
 mechanisms are reused from the existing tooling, instead of encoding them
-in the type checker. This makes easier both implementing static checks and
-composing the properties coming from different sources.
-
-However, integrating SMT solvers for static checks still presents some
-challenges. One of them is maturing the existing integrations until they are
-feasible to use in industrial setting. Another one is deriving useful
-corrective actions from the error messages. And a last challenge is lowering
-the checking overhead until it is close to the time required for queries to
-the SMT solver alone.
+in the type checker. This makes easier both to enforce our own invariants and to
+compose properties coming from different sources.
 
 The generality of the approach, and the simplicity with which it enables
-composition of different static checks, are unique features that make it a strong
+composition of different properties, are unique features that make it a strong
 candidate to impact programming practice in the future.
+
+Through our two case studies, we have tried to make a first step in
+understanding how we will be best able to leverage future such tools, even
+in situation where we can manage to use current typecheckers today. As a closing
+note, let us reproduce the principles that we've proposed throughout the article.
+
+\vspace{-0.8cm}
+\listofkeytheorems[
+  ignoreall,
+  show={principle},
+  print-body,
+  title={},
+  ]
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
