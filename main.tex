@@ -1113,6 +1113,18 @@ assume lemmaComposeSubstDomain
       && scopesSubst s0 == scopesSubst (composeSubst s0 s1) }
 \end{verbatim}
 
+Lemmas are ordinary functions, Liquid Haskell doesn't automatically make use of
+them. But Liquid Haskell comes with an idiom. When you want to ask Liquid
+Haskell to use a lemma while checking the signature of an expression
+\tc{e}\unsure{Does it actually make use of the lemma in e or outside of e?}
+you are to invoke the lemma as
+
+\begin{verbatim}
+e ? lemmaSubstituteScopesTerm
+\end{verbatim}
+
+The changes \tc{unifyEq} are annotation of this form.
+
 \subsection{Totality and \tc{unify}}
 \label{checking-unify}
 
