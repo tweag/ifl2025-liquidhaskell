@@ -89,18 +89,21 @@ data Subst t = Subst [(Var,t)]
 
 {-@
 assume lookupSubst
-  :: i:Int
-  -> xs:Subst e
-  -> {m:Maybe e | isJust m == member i (domain xs) }
+  :: forall <p :: Term -> Bool>.
+     s:Subst Term<p> -> {i:Int | Set.member i (domain s)} -> Term<p>
 @-}
-lookupSubst :: Var -> Subst e -> Maybe e
-lookupSubst i (Subst s) = lookup i s
+lookupSubst :: Subst Term -> Var -> Term
+lookupSubst (Subst s) i = case lookup i s of
+    Nothing -> V i
+    Just e -> e
 
 emptySubst :: Subst e
 emptySubst = Subst []
 
 {-@
 opaque-reflect extendSubst
+// Extending a substitution should guarantee that the new domain includes the
+// new variable.
 assume extendSubst
   :: s:_
   -> i:_
@@ -111,12 +114,17 @@ extendSubst :: Subst a -> Var -> a -> Subst a
 extendSubst (Subst s) i e = Subst ((i, e) : s)
 
 {-@ opaque-reflect fromListSubst @-}
-{-@ assume fromListSubst :: _ -> {v:_ | Set_com empty = domain v} @-}
+{-@
+// Creates a substitution whose domain includes all variables. Variables
+// that are not in the input list are mapped to themselves.
+assume fromListSubst :: _ -> {v:_ | Set_com empty = domain v}
+@-}
 fromListSubst :: [(Var, t)] -> Subst t
 fromListSubst = Subst
 
 {-@ opaque-reflect fromSetIdSubst @-}
 {-@
+// Creates a substitution that maps each variable in the set to itself.
 assume fromSetIdSubst ::
     s:Set Int -> {v:_ | s = domain v && s = freeVarsSubst v}
 @-}
@@ -280,12 +288,11 @@ formulaSize (Eq t0 t1) = 1
 -- BUG: assumed specs are ignored when the function is reflected
 {-@
 reflect substitute
+ignore substitute
 @-}
 substitute :: Subst Term -> Term -> Term
 substitute s t = case t of
-    V v -> case lookupSubst v s of
-      Nothing -> V v
-      Just t1 -> t1
+    V v -> lookupSubst s v
     SA (v, s1) -> SA (v, composeSubst s1 s)
     U -> U
     L t1 -> L (substitute s t1)
@@ -682,7 +689,7 @@ consistentSkolemScopesTerm (P t0 t1) =
 {-@
 lemmaSubstituteScopesTerm
   :: s:Subst {t:_ | isVar t}
-  -> t:Term
+  -> t:ScopedTerm (domain s)
   -> { scopesTerm t = scopesTerm (substitute s t) }
 @-}
 lemmaSubstituteScopesTerm :: Subst Term -> Term -> ()
@@ -691,10 +698,10 @@ lemmaSubstituteScopesTerm s U = ()
 lemmaSubstituteScopesTerm s (L t) = lemmaSubstituteScopesTerm s t
 lemmaSubstituteScopesTerm s (P t0 t1) =
     lemmaSubstituteScopesTerm s t0 `seq` lemmaSubstituteScopesTerm s t1
-lemmaSubstituteScopesTerm s (V v) = case lookupSubst v s of
-    Nothing -> ()
-    Just (V _) -> ()
-    Just _ -> ()
+lemmaSubstituteScopesTerm s (V v) =
+    case lookupSubst s v of
+      V _ -> ()
+      _ -> ()
 
 {-@ inline isSubsetOfJust @-}
 isSubsetOfJust :: Ord a => Set a -> Maybe (Set a) -> Bool
@@ -715,10 +722,14 @@ narrowForInvertibility vs (Subst xs) = Subst [(i, V j) | (i, V j) <- xs, Set.mem
 -- range.
 {-@
 inverseSubst
-  :: _ -> Maybe (Subst {t:_ | isVar t && consistentSkolemScopesTerm t})
+  :: _
+  -> Maybe
+      ({s:Subst {t:_ | isVar t && consistentSkolemScopesTerm t} |
+         Set_com Set.empty == domain s
+       })
 @-}
 inverseSubst :: Subst Term -> Maybe (Subst Term)
-inverseSubst (Subst xs) = Subst <$> go xs
+inverseSubst (Subst xs) = fromListSubst <$> go xs
   where
     {-@ go :: _ -> Maybe [(Var, {t:_ | isVar t && consistentSkolemScopesTerm t})] @-}
     go :: [(Var, Term)] -> Maybe [(Var, Term)]

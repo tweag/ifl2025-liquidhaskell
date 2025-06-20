@@ -182,7 +182,7 @@ data Exp = Var Int | App Exp Exp | Lam Int Exp
 
 substitute :: Set Int -> Subst Exp -> Exp -> Exp
 substitute scope s e0 = case e0 of
-  Var i -> case lookupSubst i s of Nothing -> e0; Just e -> e
+  Var i -> lookupSubst s i
   App e0 e1 -> App (substitute scope s e0) (substitute scope s e1)
   Lam i e
     | member i scope,
@@ -345,17 +345,10 @@ corresponding Haskell function honors the signature, but it isn't
 checked. In this case it's because \tc{Data.Set} is an external dependency that
 Liquid Haskell can't check. But it can also be applied to our own functions.
 
-Here \tc{Set\_mem} is a special function that Liquid Haskell maps to the theory
-of sets in the SMT solver.\unsure{I hope I'm not lying here. Please factcheck
-  me.} While that \tc{member} verifies this signature isn't checked, Liquid
-Haskell will assume this property whenever \tc{member} is used in a program.
-That is Liquid Haskell will know that \tc{member} is Haskell's implementation of
-set membership.\change{member is not too simple an example because it has two dimensions.
-On the one hand, there is the assumed refinement type, which is used to prove
-properties about code that uses member. On the other hand, there is the
-\tc{define} annotation, that is used when translating functions that use member to the
-logic. I feel the statement that LH links \tc{member} and \tc{Set\_mem} is only partly
-true if you only have the assumed signature.}
+Here \tc{Set\_mem} is a symbol that Liquid Haskell maps to the theory
+of sets in the SMT solver. While that \tc{member} verifies this signature isn't
+checked, Liquid Haskell will assume the property in the return refinement type
+whenever \tc{member} is used in a program.
 
 Notice how the predicate on the return type mentions both arguments. Liquid
 Haskell lets us express refinement types which relate arguments with each other,
@@ -379,6 +372,7 @@ measure listElts :: [a] -> Set a
 \end{verbatim}
 The meaning of the function would then be given by \tc{assume} refinement
 signature on other functions.
+
 
 \subsection{The rapier, refined}
 \label{the-rapier-with-refinement-types}
@@ -449,9 +443,9 @@ data Subst t -- opaque
 {-@ measure domain :: Subst e -> Set Int @-}
 
 assume lookupSubst
-  :: k:Int
-  -> xs:Subst e
-  -> {m:Maybe e | isJust m == member k (domain xs) }
+  :: s:Subst Exp
+  -> {k:Int | member k (domain s)}
+  -> Exp
 
 assume extendSubst
   :: s:Subst a
@@ -459,6 +453,12 @@ assume extendSubst
   -> a
   -> {v:_ | union (domain s) (singleton i) = domain v }
 \end{verbatim}
+\unsureF{Note that lookupSubst has a different type in the implementation now.
+\tc{f :: forall <p :: Exp -> Bool>. Subst Exp<p> -> {k:Int | member k (domain s)} -> Exp<p>}
+The abstract predicate \tc{p} is used to propagate properties as if lookupSubst were
+polymorphic. I think we can gloss over this. The change was needed to make \tc{lookupSubst}
+consistent with \tc{fromListSubst} whose domain contains all possible variables at the moment.
+}
 
 Notice that the logical function \tc{domain}, which stands for the set of
 variables that the substitution defines, is uninterpreted. It must be since it's an
@@ -1082,8 +1082,9 @@ lemmaSubstituteScopesTerm s U = ()
 lemmaSubstituteScopesTerm s (L t) = lemmaSubstituteScopesTerm s t
 lemmaSubstituteScopesTerm s (P t0 t1) =
     lemmaSubstituteScopesTerm s t0 `seq` lemmaSubstituteScopesTerm s t1
-lemmaSubstituteScopesTerm s (V v) = case lookupSubst v s of
-    { Nothing -> (); Just (V _) -> (); Just _ -> () }
+lemmaSubstituteScopesTerm s (V v) = case lookupSubst s v of
+    V _ -> ()
+    _ -> ()
 \end{verbatim}
 
 The proof uses itself another lemma, which we've assume in keeping with the principle of only

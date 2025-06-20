@@ -2,7 +2,6 @@
 {-@ LIQUID "--reflection" @-}
 module Subst2 where
 
-import Data.Maybe
 import Data.Set hiding (member, union, singleton)
 import qualified Data.Set as Set
 import Language.Haskell.Liquid.ProofCombinators ((?))
@@ -85,12 +84,13 @@ extendSubst (Subst s) i e = Subst ((i, e) : s)
 
 {-@
 assume lookupSubst
-  :: i:Int
-  -> xs:Subst e
-  -> {m:Maybe e | isJust m == Member i (domain xs) }
+  :: forall <p :: Exp -> Bool>.
+     s:Subst Exp<p> -> {i:Int | Member i (domain s)} -> Exp<p>
 @-}
-lookupSubst :: Int -> Subst e -> Maybe e
-lookupSubst i (Subst s) = lookup i s
+lookupSubst :: Subst Exp -> Int -> Exp
+lookupSubst (Subst s) i = case lookup i s of
+    Nothing -> Var i
+    Just e -> e
 
 -------------------------------------------
 -- applying substitutions to expressions
@@ -105,7 +105,7 @@ substitute
 @-}
 substitute :: Scope -> Subst Exp -> Exp -> Exp
 substitute scope s e0 = case e0 of
-  Var i -> case lookupSubst i s of Nothing -> e0; Just e -> e
+  Var i -> lookupSubst s i
   App e0 e1 -> App (substitute scope s e0) (substitute scope s e1)
   Lam i e ->
     let (scope', j) = withRefreshed scope i
