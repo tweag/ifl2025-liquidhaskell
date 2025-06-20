@@ -129,7 +129,7 @@ precisely, our claim is that an SMT solver well-integrated in the static checks
 of a compiler, complements an ordinary type checker when composing programs.
 
 The experience of programming with types is that of collaborating with the
-compiler to write the programs with want to write. SMT solvers can be use much
+compiler to write the programs we want to write. SMT solvers can be used much
 the same.
 
 SMT solvers, when it comes to their application to programming, are usually
@@ -138,16 +138,18 @@ literature~\cite{barnett05,demoura08,zinzin17,swamy22,filli13,leino17}. We would
 challenge the wisdom that we reach for SMT-solver-based tools when we need
 formal methods. We would benefit from using SMT solvers in mundane programs.
 
-We will be arguing, in particular, that refinement type, in the guise of Liquid
-Haskell~\cite{vazou14b}, is a tool that lets you do just that. Even though Liquid
+We will be arguing, in particular, that refinement types, in the guise of Liquid
+Haskell~\cite{vazou14b}, let you do just that. Even though Liquid
 Haskell is also usually invoked together with phrases like ``formal methods'' or
 ``verification''~\cite{vazou14,lehmann21,liu20,redmond23}. We would like to
 challenge the wisdom that Liquid Haskell is only for formal method as well.
 
-Through a case study, will we argue, even though the technology isn't really
-ready yet, for a future where programming, ordinary programming, is made easier
-and more pleasant thanks to refinements types and SMT solvers. Our case study,
-will be the handling of binders' scopes in compilers. A secondary contribution
+Through a case study, we will argue for a future where programming, ordinary
+programming, is made easier and more pleasant thanks to refinements types and
+SMT solvers, even though the technology isn't really ready yet. Our case study
+will be the handling of binders' scopes in compilers. We distill from the experience
+a set of principles that summarize concretely the impact on the programming activity.
+A secondary contribution
 is a prototype implementation of a theory of finite maps for Liquid Haskell's
 solver, to support our case study, and which we discuss in
 Section~\ref{extending-liquid-haskell}.
