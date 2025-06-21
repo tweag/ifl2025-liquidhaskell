@@ -1,5 +1,5 @@
 These files contain the source code for the paper
-"Refinement-Types Driven Development"
+"Refinement-Types Driven Development: A study"
 
 The example code is written in Haskell and can be found in the
 `examples` directory.
