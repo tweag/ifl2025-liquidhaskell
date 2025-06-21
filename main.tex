@@ -792,9 +792,8 @@ unification variables in formulas. We have a function \tc{skolemSet} to collect 
 term. And a function \tc{fromListSubst} to construct a substitution from a list of
 pairs \tc{[(Var, Term)]}.
 
-The functions \tc{substEq} and \tc{unifyEq} are simplified here to their barest
-essence. In particular, \tc{unifyEq} never fails in this simple form. They handle
-more cases in the reference source code, but these cases aren't essential to our
+The functions \tc{substEq} and \tc{unifyEq} are simplified here for the sake of presentation.
+They handle more cases in the reference source code, but these cases aren't essential to our
 discussion.
 
 \begin{figure}
@@ -816,15 +815,15 @@ substEq (V i) t1 = [(i, t1)]
 substEq t0 (V i) = [(i, t0)]
 substEq _ _ = []
 
-unifyEq :: Term -> Term -> [(Var, Term)]
+unifyEq :: Term -> Term -> Maybe [(Var, Term)]
 unifyEq t0 t1@(SA (i, s))
   | Just s' <- inverseSubst $ narrowForInvertibility (freeVars t0) s
   , let t' = substitute s' t0
   , not (Set.member i (skolemSet t'))
   , Set.isSubsetOf (freeVars t') (domain s)
-  = [(i, t')]
+  = Just [(i, t')]
 unifyEq t0@(SA _) t1 = unifyEq t1 t0
-unifyEq _ _ = []
+unifyEq _ _ = Nothing
 
 -- | @narrowForInvertibility vs s@ removes pairs from @s@ if the
 -- range is not a variable, or if the range is not a member of @vs@.
@@ -996,9 +995,6 @@ the rest of the function.
 
 Let us now turn to the \tc{unifyEq} function, which is a traditional unification
 function: it takes an equation and returns a list of unifications.
-It is simplified to
-never fail for conciseness, but it can indeed fail in the reference source code.
-
 We start introducing static checks by providing a refinement type signature to
 the function \tc{unifyEq}, which encodes the scope check, the occurs check,
 and the relationship of skolems present in the result and in the arguments.
@@ -1010,7 +1006,7 @@ unifyEq
           unionCommutes (scopesTerm t0) (scopesTerm t1)
        && consistentSkolemScopesTerm t1
      }
-  -> [(v :: Var
+  -> Maybe [(v :: Var
       , { t:Term |
             isSubsetOfJust (freeVars t)
               (IntMap.lookup v
