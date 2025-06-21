@@ -2,6 +2,7 @@
 \citestyle{acmnumeric}
 \usepackage[utf8]{inputenc}
 \usepackage{fancyvrb}
+\usepackage{listings}
 \usepackage[store-all]{keytheorems}
 
 %%%%%%%%%%%%%%%%% Editing marks %%%%%%%%%%%%%%%%%
@@ -57,7 +58,7 @@
      \country{France}
 }
 \email{arnaud.spiwack@tweag.io}
-\keywords{refinement types, Liquid Haskell, SMT solvers, library design}
+\keywords{refinement types, Liquid Haskell, SMT solvers, program design}
 \begin{CCSXML}
 <ccs2012>
    <concept>
@@ -100,6 +101,14 @@
 \newcommand{\sourcefile}[1]{\anon[#1 (in the attached artifact) to be replaced with a link when non-anonymized]{{\scriptsize\url{https://github.com/facundominguez/liquidhaskell/blob/fd/rapier/tests/rapier/#1}}}}
 \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
     fontsize=\codeblocksize,
+}
+\lstset{
+    basicstyle=\ttfamily\fontsize{6}{8}\selectfont,
+    breaklines=true,
+    % settings to get rid of spaces when copy and pasting
+    keepspaces=true,
+    basewidth=0.5em,
+    columns=fixed,
 }
 \newtheorem{principle}{Principle}
 
@@ -1647,6 +1656,33 @@ note, let us reproduce the principles that we've proposed throughout the article
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
+
+\appendix
+
+\section{Build instructions for the source code}
+\lstinputlisting{ifl25-lh-src/README.md}
+
+\section{System dependencies with nix: shell.nix}
+\lstinputlisting{ifl25-lh-src/shell.nix}
+
+\section{Build script: scripts/build.sh}
+\lstinputlisting{ifl25-lh-src/scripts/build.sh}
+
+\section{Clean script: scripts/clean.sh}
+\lstinputlisting{ifl25-lh-src/scripts/clean.sh}
+
+\section{examples/Subst1.hs}
+\label{Subst1.hs}
+\lstinputlisting{ifl25-lh-src/examples/Subst1.hs}
+
+\section{examples/Subst2.hs}
+\label{Subst2.hs}
+\lstinputlisting{ifl25-lh-src/examples/Subst2.hs}
+
+\section{examples/Unif.hs}
+\label{Unif.hs}
+\lstinputlisting{ifl25-lh-src/examples/Unif.hs}
+
 \end{document}
 
 % LocalWords:  invariants axiomatizes axiomatize integrations SMT subtyping

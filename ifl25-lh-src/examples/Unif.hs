@@ -38,7 +38,11 @@ embed IntMap * as IntMapSetInt_t
 // for this test.
 define IntMap.empty     = (IntMapSetInt_default None)
 define IntMap.insert x y m = (IntMapSetInt_store m x (Some y))
-define IntMap.lookup x m = if (isSome (IntMapSetInt_select m x)) then (GHC.Internal.Maybe.Just (someVal (IntMapSetInt_select m x))) else GHC.Internal.Maybe.Nothing
+define IntMap.lookup x m =
+         if (isSome (IntMapSetInt_select m x)) then
+           (GHC.Internal.Maybe.Just (someVal (IntMapSetInt_select m x)))
+         else
+           GHC.Internal.Maybe.Nothing
 define IntMap.delete x m = (Map_store m x None)
 
 define IntMap.union x y = IntMapSetInt_union x y
@@ -50,10 +54,12 @@ define intMapIsSubsetOf x y = IntMapSetInt_isSubsetOf x y
 intMapIsSubsetOf :: IntMap (Set Int) -> IntMap (Set Int) -> Bool
 intMapIsSubsetOf _ _ = undefined
 
--- BUG: It shouldn't be necessary to define intMapUnion. Without it, we get
+-- It shouldn't be necessary to define intMapUnion, but without it, we get
 -- that IntMap.union is not correctly expanded to what the preamble defines.
 {-@ assume intMapUnion
-     :: s0:IntMap (Set Int) -> s1:IntMap (Set Int) -> {v:_ | IntMap.union s0 s1 = v }
+     :: s0:IntMap (Set Int)
+     -> s1:IntMap (Set Int)
+     -> {v:_ | IntMap.union s0 s1 = v }
 @-}
 {-@ inline intMapUnion @-}
 {-@ ignore intMapUnion @-}
@@ -341,13 +347,15 @@ substituteFormula scope s = \case
         let u = freshVar scope
             scope' = Set.insert u scope
             s' = extendSubst s v (V u)
-            f' = substituteFormula scope' s' (f ? lemmaExtendSubstScopes s v (V u))
+            f' = substituteFormula scope' s'
+                   (f ? lemmaExtendSubstScopes s v (V u))
          in
             Forall u f'
       | otherwise ->
         let scope' = Set.insert v scope
             s' = extendSubst s v (V v)
-            f' = substituteFormula scope' s' (f ? lemmaExtendSubstScopes s v (V v))
+            f' = substituteFormula scope' s'
+                   (f ? lemmaExtendSubstScopes s v (V v))
          in
             Forall v f'
     Exists v f
@@ -355,16 +363,19 @@ substituteFormula scope s = \case
         let u = freshVar scope
             scope' = Set.insert u scope
             s' = extendSubst s v (V u)
-            f' = substituteFormula scope' s' (f ? lemmaExtendSubstScopes s v (V u))
+            f' = substituteFormula scope' s'
+                   (f ? lemmaExtendSubstScopes s v (V u))
          in
             Exists u f'
       | otherwise ->
         let scope' = Set.insert v scope
             s' = extendSubst s v (V v)
-            f' = substituteFormula scope' s' (f ? lemmaExtendSubstScopes s v (V v))
+            f' = substituteFormula scope' s'
+                   (f ? lemmaExtendSubstScopes s v (V v))
          in
             Exists v f'
-    Conj f1 f2 -> Conj (substituteFormula scope s f1) (substituteFormula scope s f2)
+    Conj f1 f2 ->
+      Conj (substituteFormula scope s f1) (substituteFormula scope s f2)
     Then (t0, t1) f2 ->
       Then (substitute s t0, substitute s t1) (substituteFormula scope s f2)
         ? lemmaSubstituteFreeVars scope s t0
@@ -379,7 +390,8 @@ substituteFormula scope s = \case
 {-@ lazy scopesSubst @-}
 {-@ opaque-reflect scopesSubst @-}
 scopesSubst :: Subst Term -> IntMap (Set Int)
-scopesSubst (Subst xs) = foldr IntMap.union IntMap.empty $ map (scopesTerm . snd) xs
+scopesSubst (Subst xs) =
+    foldr IntMap.union IntMap.empty $ map (scopesTerm . snd) xs
 
 {-@
 assume lemmaSubstituteFreeVars
@@ -415,7 +427,9 @@ skolemize
           && existsCount v = 0
           && isSubsetOf (freeVarsFormula v) sf
           && isSubsetOf se0 se
-          && intersection se0 (IntMapSetInt_keys (IntMap.difference (scopes v) (scopes f))) = Set.empty
+          && intersection se0
+               (IntMapSetInt_keys (IntMap.difference (scopes v) (scopes f)))
+               = Set.empty
           && intMapIsSubsetOf (scopes f) (scopes v)
           && isSubsetOf (IntMapSetInt_keys (scopes v)) se
        }>
@@ -471,7 +485,8 @@ existsCount Eq{} = 0
 unify
   :: s:Set Int
   -> {f:ScopedFormula s | consistentSkolemScopes f && existsCount f = 0}
-  -> Maybe [{p:(Var, {st:_ | consistentSkolemScopesTerm st && intMapIsSubsetOf (scopesTerm st) (scopes f) }) |
+  -> Maybe [{p:(Var, {st:_ | consistentSkolemScopesTerm st
+                          && intMapIsSubsetOf (scopesTerm st) (scopes f) }) |
            isSubsetOfJust (freeVars (snd p)) (IntMap.lookup (fst p) (scopes f))
         && not (Set.member (fst p) (skolemSet (snd p)))
       }] / [formulaSize f]
@@ -498,7 +513,9 @@ substEq
   -> {t1:Term | UnionCommutes (scopesTerm t0) (scopesTerm t1)
                 && consistentSkolemScopesTerm t1}
   -> [(Var, {v:Term |
-          intMapIsSubsetOf (scopesTerm v) (IntMap.union (scopesTerm t0) (scopesTerm t1))
+          intMapIsSubsetOf
+            (scopesTerm v)
+            (IntMap.union (scopesTerm t0) (scopesTerm t1))
        && isSubsetOf (freeVars v) (Set.union (freeVars t0) (freeVars t1))
       })]
 @-}
@@ -564,7 +581,12 @@ unifyEqEnd
              && consistentSkolemScopesTerm t
            }
          ) |
-           isSubsetOfJust (freeVars (snd p)) (IntMap.lookup (fst p) (IntMap.union (scopesTerm t0) (scopesTerm t1)))
+           isSubsetOfJust
+             (freeVars (snd p))
+             (IntMap.lookup
+               (fst p)
+               (IntMap.union (scopesTerm t0) (scopesTerm t1))
+             )
         && not (Set.member (fst p) (skolemSet (snd p)))
       }]
 @-}
@@ -584,7 +606,9 @@ unifyEqEnd _ _ = Nothing
 substituteSkolems
   :: {f:Formula | consistentSkolemScopes f && existsCount f = 0}
   -> {s:[{p:(Var, {st:Term | consistentSkolemScopesTerm st}) |
-           isSubsetOfJustOrNothing (freeVars (snd p)) (IntMap.lookup (fst p) (scopes f))
+           isSubsetOfJustOrNothing
+             (freeVars (snd p))
+             (IntMap.lookup (fst p) (scopes f))
          }] |
         UnionCommutes (scopes f) (scopesList s)
       }
@@ -610,7 +634,9 @@ substituteSkolems f0 s = case f0 of
 substituteSkolemsTerm
   :: {t:Term | consistentSkolemScopesTerm t}
   -> {s:[{p:(Var, {st:Term | consistentSkolemScopesTerm st}) |
-           isSubsetOfJustOrNothing (freeVars (snd p)) (IntMap.lookup (fst p) (scopesTerm t))
+           isSubsetOfJustOrNothing
+             (freeVars (snd p))
+             (IntMap.lookup (fst p) (scopesTerm t))
          }] |
         UnionCommutes (scopesTerm t) (scopesList s)
      }
@@ -714,9 +740,11 @@ isSubsetOfJust xs Nothing = False
 -- | @narrowForInvertibility vs s@ removes pairs from @s@ if the range
 -- is not a variable, or if the range is not a member of @vs@.
 narrowForInvertibility :: Set Var -> Subst Term -> Subst Term
-narrowForInvertibility vs (Subst xs) = Subst [(i, V j) | (i, V j) <- xs, Set.member j vs]
+narrowForInvertibility vs (Subst xs) =
+    Subst [(i, V j) | (i, V j) <- xs, Set.member j vs]
 
--- TODO: consider what to do with non-invertible substitutions like ?v[x\z,y\z] ?= z
+-- TODO: consider what to do with non-invertible substitutions
+-- like ?v[x\z,y\z] ?= z
 --
 -- At the moment we just pick the first of the variables with a duplicated
 -- range.
@@ -731,7 +759,10 @@ inverseSubst
 inverseSubst :: Subst Term -> Maybe (Subst Term)
 inverseSubst (Subst xs) = fromListSubst <$> go xs
   where
-    {-@ go :: _ -> Maybe [(Var, {t:_ | isVar t && consistentSkolemScopesTerm t})] @-}
+    {-@
+    go :: _
+       -> Maybe [(Var, {t:_ | isVar t && consistentSkolemScopesTerm t})]
+    @-}
     go :: [(Var, Term)] -> Maybe [(Var, Term)]
     go [] = Just []
     go ((i, V j) : xs) = ((j, V i) :) <$> go xs
@@ -776,7 +807,8 @@ unifyFormula' mustTrace =
   where
     trace :: String -> Formula -> Formula
     trace label f
-      | mustTrace = Debug.Trace.trace (label ++ ": " ++ ppFormula prettyName f) f
+      | mustTrace =
+          Debug.Trace.trace (label ++ ": " ++ ppFormula prettyName f) f
       | otherwise = f
     traceUnify :: String -> Maybe [(Var, Term)] -> Maybe [(Var, Term)]
     traceUnify label xs
@@ -786,15 +818,18 @@ unifyFormula' mustTrace =
     showUnification Nothing = "Nothing"
     showUnification (Just xs) =
       let xs' = map (\(i, t) -> (prettyName i, ppTerm prettyName t)) xs
-       in "[" ++ List.intercalate ", " (map (\(i, t) -> i ++ ":=" ++ t) xs') ++ "]"
+       in "[" ++
+          List.intercalate ", " (map (\(i, t) -> i ++ ":=" ++ t) xs') ++
+          "]"
 
 -- pretty printing
 
 -- | Pretty print a variable name
 {-@ ignore prettyName @-}
 prettyName :: Int -> String
-prettyName = ((["x", "y", "z", "u", "v", "w", "r", "s", "t"] ++ [ "v" ++ show i | i <- [1..] ]) !!)
--- prettyName = ((["a", "b", "c", "t_f", "x_f", "l", "r" ] ++ ["x", "y", "z", "u", "v", "w", "r", "s", "t"] ++ [ "v" ++ show i | i <- [1..] ]) !!)
+prettyName =
+  ((["x", "y", "z", "u", "v", "w", "r", "s", "t"] ++
+    [ "v" ++ show i | i <- [1..] ]) !!)
 
 -- | Pretty print a formula
 {-@ ignore ppFormula @-}
@@ -820,7 +855,10 @@ ppTerm vnames t =
 {-@ ignore ppSubst @-}
 ppSubst :: (Int -> String) -> Subst Term -> String
 ppSubst vnames (Subst xs) =
-  "[" ++ List.intercalate ", " (map (\(i, t) -> vnames i ++ ":=" ++ ppTerm vnames t) xs) ++ "]"
+  "[" ++
+  List.intercalate
+    ", " (map (\(i, t) -> vnames i ++ ":=" ++ ppTerm vnames t) xs) ++
+  "]"
 
 
 -- Test formulas
@@ -850,7 +888,9 @@ tf4 = Forall 0 $ Forall 1 $
 
 tf5 :: Formula
 tf5 = Forall 0 $ Forall 1 $
-  (V 0, L (V 1)) `Then` Forall 1 ((V 1, V 0) `Then` Exists 2 (Eq (V 1) (L (V 2))))
+  (V 0, L (V 1))
+    `Then` Forall 1 ((V 1, V 0)
+    `Then` Exists 2 (Eq (V 1) (L (V 2))))
 
 tf6 :: Formula
 tf6 = Forall 0 $ Forall 0 $ Exists 1 (Eq (V 1) (V 0))
@@ -861,7 +901,9 @@ tf7 = Forall 0 $ Exists 1 $ Exists 2 $ (V 0, V 1) `Then` Eq (V 0) (V 2)
 infixr 7 `Then`
 infixr 8 `Conj`
 
--- | forall a b c. exists t_f x_f. a = (b, c) -> a = (Int -> Int, Int) -> t_f = b -> x_f = c -> exists l r. t_f = l -> r /\ l = x_f /\ x_f = Int -> r = c
+-- forall a b c. exists t_f x_f.
+--   a = (b, c) -> a = (Int -> Int, Int) -> t_f = b -> x_f = c ->
+--     exists l r. t_f = l -> r /\ l = x_f /\ x_f = Int -> r = c
 tf8 :: Formula
 tf8 = Forall 0 $ Forall 1 $ Forall 2 $
   Exists 3 (Exists 4 $
@@ -889,7 +931,12 @@ test = do
         , ("tf5", (tf5, Just [(2,V 1)]))
         , ("tf6", (tf6, Just [(1,V 0)]))
         , ("tf7", (tf7, Nothing))
-        , ("tf8", (tf8, Just [(3,P (SA (5,Subst [(0,P (P U U) U),(1,P U U),(2,U)])) (SA (6,Subst [(0,P (P U U) U),(1,P U U),(2,U)]))),(5,SA (4,Subst [(0,P (P U U) U),(1,P U U),(2,U)])),(6,U)]))
+        , ("tf8", (tf8,
+            Just [(3,P (SA (5,Subst [(0,P (P U U) U),(1,P U U),(2,U)]))
+                       (SA (6,Subst [(0,P (P U U) U),(1,P U U),(2,U)])))
+                 ,(5,SA (4,Subst [(0,P (P U U) U),(1,P U U),(2,U)]))
+                 ,(6,U)])
+          )
         ]
   mapM_ runUnificationTest tests
   where
@@ -902,4 +949,5 @@ test = do
       if result == expected
         then putStrLn $ concat ["Test ", name, ": Passed"]
         else putStrLn $
-               concat ["Test ", name, ": Failed\n", show expected, " but got ", show result, "\n"]
+               concat ["Test ", name, ": Failed\n", show expected, " but got ",
+                       show result, "\n"]

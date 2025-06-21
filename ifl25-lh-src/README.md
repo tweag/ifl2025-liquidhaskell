@@ -1,5 +1,5 @@
-This file contains the source code for the paper
-"Interface design with SMT solvers: A study"
+These files contain the source code for the paper
+"Refinement-Types Driven Development"
 
 The example code is written in Haskell and can be found in the
 `examples` directory.
