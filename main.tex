@@ -98,7 +98,7 @@
 
 \newcommand{\tc}[1]{{\small\texttt{#1}}}
 \newcommand{\codeblocksize}{\fontsize{6.5}{9}\selectfont}
-\newcommand{\sourcefile}[1]{\anon[#1 (in the attached artifact) to be replaced with a link when non-anonymized]{{\scriptsize\url{https://github.com/facundominguez/liquidhaskell/blob/fd/rapier/tests/rapier/#1}}}}
+\newcommand{\sourcefile}[1]{\tc{#1} in Appendix~\ref{#1}}
 \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
     fontsize=\codeblocksize,
 }
@@ -390,8 +390,7 @@ type signatures on other functions.
 We would, now, like to argue that using Liquid Haskell to enforce the
 requirements from Section~\ref{the-rapier-with-stronger-types} is more
 straightforward than using the type checker alone. The code presented in this section is available in the file
-\tc{Subst1.hs}.\footnote{The simplest approach with Liquid Haskell:
-  \sourcefile{Subst1.hs}}
+\sourcefile{Subst1.hs}.
 
 In order to deal with scope checks, we first define a type alias \tc{ScopeExp S},
 that is the type of all
@@ -588,7 +587,7 @@ way to test for membership and to extend a scope. This is why we define a
 \tc{Member} predicate alias, only available in the logic, but provide no
 \tc{member} function in Haskell for \tc{Scope}s.
 The full code for this example can be found in the
-file \tc{Subst2.hs}.\footnote{A solution with a sealed scope type: \sourcefile{Subst2.hs}}
+file \sourcefile{Subst2.hs}.
 
 This is our next principle for refinement types:
 \begin{principle}
@@ -716,7 +715,7 @@ when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
 and, in the authors' experience, something where any help from the compiler is welcome.
 The source code of this section can be found in the file
-\tc{Unif.hs}.\footnote{Source code of unification: \sourcefile{Unif.hs}}
+\sourcefile{Unif.hs}.
 
 In addition to variables, still represented as integers, we have unification
 variables. Unification variables have their own scopes: the formula
@@ -973,8 +972,7 @@ Liquid Haskell helpfully lets us treat the state monad as equipped with
 Hoare triples \tc{State<pre,post>}. The supporting code for the refined state
 monad is not readily available in Liquid Haskell. It probably should be, but in
 the meantime, it can be found in Liquid Haskell's test suite, so we simply
-copied it in our artifact\footnote{Refinement type support
-  for the State monad: \sourcefile{State.hs}}.
+copied it in the file \sourcefile{State.hs}.
 
 The main conjuncts of the postconditon are \tc{consistent\-Skolem\-Scopes v} and
 \tc{existsCount v = 0}, the rest are invariants used by the recursive calls of
@@ -1266,11 +1264,7 @@ Haskell. It's not in a mergeable state yet, for one thing: we only support finit
 maps with \tc{Int} as their domain and \tc{Set Int} as their codomain. It could easily be adapted for any fixed
 domain and codomain types, but it's not yet a general solution that can be instantiated at any
 domain or codomain type. But our ultimate intent is to upstream these changes. Our
-modifications can be found in the files \tc{ifl25-\allowbreak
-  liquidhaskell.patch} and \tc{ifl25-\allowbreak liquid-\allowbreak
-  fix\-point.patch}.\footnote{Patches for liquidhaskell and liquid-fixpoint:
-  \sourcefile{ifl25-liquidhaskell.patch} and
-  \sourcefile{ifl25-liquid-fixpoint.patch}}.
+modifications can be found in the files \sourcefile{ifl25-liquidhaskell.patch} and \sourcefile{ifl25-liquid-fixpoint.patch}.
 
 The theory of finite map is a good example of a theory that Liquid Haskell wants
 to support: it is both powerful, and widely applicable. Pragmatically, it's also
@@ -1682,6 +1676,19 @@ note, let us reproduce the principles that we've proposed throughout the article
 \section{examples/Unif.hs}
 \label{Unif.hs}
 \lstinputlisting{ifl25-lh-src/examples/Unif.hs}
+
+\section{examples/State.hs}
+\label{State.hs}
+\lstinputlisting{ifl25-lh-src/examples/State.hs}
+
+\section{patches/ifl25-liquidhaskell.patch}
+\label{ifl25-liquidhaskell.patch}
+\lstinputlisting{ifl25-lh-src/patches/ifl25-liquidhaskell.patch}
+
+\section{patches/ifl25-liquid-fixpoint.patch}
+\label{ifl25-liquid-fixpoint.patch}
+\lstinputlisting{ifl25-lh-src/patches/ifl25-liquid-fixpoint.patch}
+
 
 \end{document}
 
