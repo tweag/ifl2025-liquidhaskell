@@ -1144,7 +1144,7 @@ However, in the case of Haskell, laziness lets us write
 bad :: () -> ()
 bad _ = let {-@ f :: { false } @-}
             f = error "never happens"
-         in (\_ -> ()) f
+         in () ? f
 \end{verbatim}
 It may seem that Liquid Haskell could accept this function because \tc{f} appears
 to prove \tc{false}. In a strict language this wouldn't be a big problem as
