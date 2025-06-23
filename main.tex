@@ -233,7 +233,7 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 \tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
 the type index \tc{n} is the name of the set at the type level. A value of type \tc{Name n} is a name that
 belongs to the scope set \tc{n}. A value of type \tc{NameBinder n l} is
-a name \tc{b} such that addint \tc{b} to scope set \tc{n} results in the scope
+a name \tc{b} such that adding \tc{b} to scope set \tc{n} results in the scope
 set \tc{l}.
 These types are to be used in
 the abstract syntax tree of terms:
@@ -562,7 +562,7 @@ Haskell precisely that \tc{withRefreshed} does both membership checking and
 fresh variable call: the variable returned by \tc{withRefreshed} isn't in the
 old scope but is in the new scope.
 
-It make the type \tc{Scope} abstract to enforce that binders are always
+We make the type \tc{Scope} abstract to enforce that binders are always
 refreshed when traversed, as \tc{withRefreshed} is the only
 way to test for membership and to extend a scope. This is why we define a
 \tc{Member} predicate alias, only available in the logic, but provide no
@@ -1121,7 +1121,7 @@ However, in the case of Haskell, laziness lets us write
 bad :: () -> ()
 bad _ = let {-@ f :: { false } @-}
             f = error "never happens"
-         in () ? f
+         in (\_ -> ()) f
 \end{verbatim}
 It may seem that Liquid Haskell could accept this function because \tc{f} appears
 to prove \tc{false}. In a strict language this wouldn't be a big problem as
@@ -1214,22 +1214,22 @@ substitution since we only substitute inside terms.
 \subsection{Lemmas in Liquid Haskell}
 \label{sec:lh-lemmas}
 
-Another way, besides adding computationally irrelevant arguments, like in the
-previous sections for the refined implementation to differ from its classical
-version is with the addition of lemmas.
+In the previous sections we have seen that the refined implementation can be
+different from the classical version by adding computationally irrelevant
+arguments. Another way in which they could differ is with the addition of lemmas.
 
 Take, for instance, the \tc{unifyFormula} function which ties together
 \tc{skolemize} and \tc{unify}, it differs from its classical implementation as
 follows:
 
 \begin{verbatim}
-unifyFormula :: Set Int -> IntMap (Set Int) -> Formula -> Maybe [(Var, Term)]
-unifyFormula s m f =
-    let m' = qvToScopes s m
--       skf = skolemize s f
-+       skf = skolemize s f ? lemmaConsistentSuperset m m' f
-        (f'', m'') = runState skf m'
-     in unify s m'' f''
+ unifyFormula :: Set Int -> IntMap (Set Int) -> Formula -> Maybe [(Var, Term)]
+ unifyFormula s m f =
+     let m' = qvToScopes s m
+-        skf = skolemize s f
++        skf = skolemize s f ? lemmaConsistentSuperset m m' f
+         (f'', m'') = runState skf m'
+      in unify s m'' f''
 \end{verbatim}
 
 This idiom \tc{e?p} means ``use lemma \tc{p} when checking \tc{e}''.
@@ -1266,16 +1266,16 @@ lemmaConsistentSuperset m0 m1 (Eq t0 t1) =
 
 So straightforward, in fact that the proof was largely written by AI-based code
 completion. Since lemmas don't have computational content (\tc{\{p\}} is a
-shorthand for \tc{\{\_::() | p \}}), we only care about the existence of a
+shorthand for \tc{\{\_:() | p \}}), we only care about the existence of a
 proof, making code completion particularly useful. Liquid Haskell understanding
-theory of finite map (see Section~\ref{extending-liquid-haskell}) is crucial in
+the theory of finite maps (see Section~\ref{extending-liquid-haskell}) is crucial in
 making this proof so terse.
 
-Ultimately, the proof of \tc{lemmaConsistentSupersetTerm} depends on the
-following lemma which we must assume of the substitution data type
-(unsurprisingly, the substitution interface needs to satisfy more properties
-than in Section~\ref{the-rapier-with-refinement-types} to accommodate the
-unification variables' scopes)
+\tc{lemmaConsistentSuperset} uses an analogous lemma \tc{lemmaConsistentSupersetTerm} for terms,
+whose proof ultimately depends on the following lemma which we must assume of the substitution data type.
+Unsurprisingly, the substitution interface needs to satisfy more properties
+than in Section~\ref{the-rapier-with-refinement-types} to accommodate
+unification variable scopes.
 
 \begin{verbatim}
 assume lemmaConsistentSupersetSubst
