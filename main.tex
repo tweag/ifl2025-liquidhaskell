@@ -465,12 +465,6 @@ assume extendSubst
   -> a
   -> {v:Subst a | union (domain s) (singleton i) = domain v }
 \end{verbatim}
-\unsureF{Note that lookupSubst has a different type in the implementation now.
-\tc{f :: forall <p :: Exp -> Bool>. Subst Exp<p> -> {k:Int | member k (domain s)} -> Exp<p>}
-The abstract predicate \tc{p} is used to propagate properties as if lookupSubst were
-polymorphic. I think we can gloss over this. The change was needed to make \tc{lookupSubst}
-consistent with \tc{fromListSubst} whose domain contains all possible variables at the moment.
-}
 
 Notice that the logical function \tc{domain}, which stands for the set of
 variables that the substitution defines, is uninterpreted. It must be since it's an
