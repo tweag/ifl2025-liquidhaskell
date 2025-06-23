@@ -125,24 +125,23 @@
 
 SMT solvers are useful to the ordinary activity of
 programming. This is what we would like to convince the reader of. More
-precisely, our claim is that an SMT solver, well-integrated in the static checks
-of a compiler, complements an ordinary type checker when composing programs.
-
-The experience of programming with types is that of collaborating with the
-compiler to write the programs we want to write. SMT solvers can be used much
-the same.
+precisely, our claim is that an SMT solver, well-integrated in
+a compiler, complements an ordinary type checker and can, in fact, be used much
+the same way. SMT solvers and type checker are good at enforcing different kinds of
+properties, broadening the ways in which we can design our programs.
 
 SMT solvers, when it comes to their application to programming, are usually
-paired with terms like ``formal methods'' or ``verification'' in the
-literature~\cite{barnett05,demoura08,zinzin17,swamy22,filli13,leino17}. We would like to
-challenge the wisdom that we reach for SMT-solver-based tools when we need
-formal methods. We would benefit from using SMT solvers in mundane programs.
+paired, in the literature, with terms like ``formal methods'' or
+``verification''~\cite{barnett05,demoura08,zinzin17,swamy22,filli13,leino17}. We
+would like to challenge the wisdom that we reach for SMT-solver-based tools when
+we need formal methods. We would benefit from using SMT solvers in mundane
+programs. Not because it makes programs more correct, but because it helps us
+write the programs we want.
 
 We will be arguing, in particular, that refinement types, in the guise of Liquid
 Haskell~\cite{vazou14b}, let you do just that. Even though Liquid
 Haskell is also usually invoked together with phrases like ``formal methods'' or
-``verification''~\cite{vazou14,lehmann21,liu20,redmond23}. We would like to
-challenge the wisdom that Liquid Haskell is only for formal method as well.
+``verification''~\cite{vazou14,lehmann21,liu20,redmond23}.
 
 Through a case study, we will argue for a future where programming, ordinary
 programming, is made easier and more pleasant thanks to refinements types and
