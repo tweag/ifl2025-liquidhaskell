@@ -126,8 +126,8 @@
 SMT solvers are useful to the ordinary activity of
 programming. This is what we would like to convince the reader of. More
 precisely, our claim is that an SMT solver, well-integrated in
-a compiler, complements an ordinary type checker and can, in fact, be used much
-the same way. SMT solvers and type checker are good at enforcing different kinds of
+a compiler, complements an ordinary type checker and can, in fact, be used much in
+the same way. SMT solvers and type checkers are good at enforcing different kinds of
 properties, broadening the ways in which we can design our programs.
 
 SMT solvers, when it comes to their application to programming, are usually
@@ -157,7 +157,7 @@ Section~\ref{extending-liquid-haskell}.
 \label{capture-avoiding-substitution}
 
 Binding scope management is recognized as a persistent annoyance when writing compilers.
-It's easy to get wrong and is a source of mistakes to the point that many have
+It is easy to get wrong and it is a source of mistakes to the point that many have
 proposed disciplines to prevent mismanagement of scopes, like name capture.
 The poster child is substitution, like in
 $(\lambda x. y)[y:=t]$. The result of this substitution is $\lambda x. t$.
