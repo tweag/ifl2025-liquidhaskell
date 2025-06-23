@@ -1271,7 +1271,7 @@ proof, making code completion particularly useful. Liquid Haskell understanding
 the theory of finite maps (see Section~\ref{extending-liquid-haskell}) is crucial in
 making this proof so terse.
 
-\tc{lemmaConsistentSuperset} uses an analogous lemma \tc{lemmaConsistentSupersetTerm} for terms,
+The lemma \tc{lemmaConsistentSuperset} uses an analogous lemma \tc{lemma\-Consistent\-Superset\-Term} for terms,
 whose proof ultimately depends on the following lemma which we must assume of the substitution data type.
 Unsurprisingly, the substitution interface needs to satisfy more properties
 than in Section~\ref{the-rapier-with-refinement-types} to accommodate
@@ -1467,7 +1467,8 @@ publications/ifl25-rtdd/examples/Unif2.hs:580:18: error:
     in the context
       ?g : {?g : Maybe (Subst Term) |
                ?g == Just ss'
-            && ?g == inverseSubst s m (narrowForInvertibility (freeVars t1) ss)}
+            && ?g == inverseSubst s m
+                       (narrowForInvertibility (freeVars t1) ss)}
 
       t0 : {t0 : (Int, (Subst Term)) | t0 == SA (i, ss)
                isSubsetOf (freeVars t0) s
