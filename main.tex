@@ -435,11 +435,11 @@ but not much about how they ought to be enforced.
 
 Finally, we will take as a parameter a datatype representing substitutions
 (\emph{i.e.} finite maps of variables to terms). To represent this parameter in
-our study we take an abstract type and \tc{assume} the necessary property that a
-substitution type need to verify in order to qualify. Even though we used a
-concrete type for the sake of testing (remember, this isn't a verification
-project, it's ordinary programming and it needs testing), representing the type
-like that ensures that we can support any efficient substitution type.
+our study we take an abstract type and \tc{assume} the necessary properties that a
+substitution type needs to respect. Since this is ordinary programming, not a
+verification project, we need to test our code, and we provide a concrete type
+for that sake. But using an abstract type ensures that we can support
+any efficient substitution type.
 
 \begin{verbatim}
 data Subst t -- opaque
