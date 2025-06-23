@@ -1225,7 +1225,7 @@ follows:
 \begin{verbatim}
  unifyFormula :: Set Int -> IntMap (Set Int) -> Formula -> Maybe [(Var, Term)]
  unifyFormula s m f =
-     let m' = qvToScopes s m
+     let m' = addSToM s m
 -        skf = skolemize s f
 +        skf = skolemize s f ? lemmaConsistentSuperset m m' f
          (f'', m'') = runState skf m'
@@ -1241,11 +1241,13 @@ from ordinary (total!) recursion. In the case of \tc{lemmaConsistentSuperset}
 the proof is entirely straightforward
 
 \begin{verbatim}
+{-@
 lemmaConsistentSuperset
   :: m0:IntMap (SetInt)
   -> {m1:IntMap (Set Int) | intMapIsSubsetOf m0 m1}
   -> {f:Formula | consistentScopes m0 f}
   -> {consistentScopes m1 f}
+@-}
 lemmaConsistentSuperset
   :: IntMap (Set Int) -> IntMap (Set Int) -> Formula -> ()
 lemmaConsistentSuperset m0 m1 (Forall _ f) =
