@@ -107,9 +107,6 @@ lookupSubst (Subst s) i = case lookup i s of
     Nothing -> V i
     Just e -> e
 
-emptySubst :: Subst e
-emptySubst = Subst []
-
 {-@
 // Extending a substitution should guarantee that the new domain includes the
 // new variable.
@@ -128,26 +125,22 @@ extendSubst _ _ (Subst s) i e = Subst ((i, e) : s)
 {-@
 // Creates a substitution whose domain includes all variables. Variables
 // that are not in the input list are mapped to themselves.
-assume fromListSubst :: _ -> {v:_ | Set_com empty = domain v}
-@-}
-fromListSubst :: [(Var, t)] -> Subst t
-fromListSubst = Subst
-
-{-@
-// Like formListSubst, but with stronger guarantees.
-assume fromListSubst2
-  :: forall <p :: Term -> Bool>.
-     s:_
+// 
+// When writing this signature one of the concerns is ensuring that
+// whatever property is in the postcondition, it holds in the case when
+// @lookupSubst i ss@ returns @V i@.
+assume fromListSubst
+  :: s:_
   -> m:_
-  -> [(Var, Term<p>)]
-  -> {v:Subst Term<p> |
+  -> [(Var, ConsistentScopedTerm s m)]
+  -> {v:Subst Term |
           consistentScopesSubst m v
        && isSubsetOf (freeVarsSubst v) s
-       && Set_com empty = domain v
+       && s = domain v
      }
 @-}
-fromListSubst2 :: Set Int -> IntMap (Set Int) -> [(Var, Term)] -> Subst Term
-fromListSubst2 _ _ = Subst
+fromListSubst :: Set Int -> IntMap (Set Int) -> [(Var, Term)] -> Subst Term
+fromListSubst _ _ = Subst
 
 {-@
 // Creates a substitution that maps each variable in the set to itself.
@@ -300,6 +293,10 @@ substitute s m ss t = case t of
     P t1 t2 -> P (substitute s m ss t1) (substitute s m ss t2)
 
 {-@
+// Since composeSubst applies s0 to the range of s1, we require that
+// the free variables of s1 are in the domain of s0.
+// 
+// The domain of s1 should be unchanged in the result.
 ignore composeSubst
 assume composeSubst
   :: s:_
@@ -395,13 +392,11 @@ consistentScopesSubst m (Subst xs) =
     all (\(i, t) -> consistentScopesTerm m t) xs
 
 {-@
+// Another property we assume of sustitutions.
 assume castConsistentScopesSubst
   :: s:_
   -> m:_
-  -> {ss:_ |
-         consistentScopesSubst m ss
-      && isSubsetOf (freeVarsSubst ss) s
-     }
+  -> ss:ConsistentScopedSubst s m
   -> {v:Subst (ConsistentScopedTerm s m) | v = ss}
 @-}
 castConsistentScopesSubst
@@ -409,6 +404,8 @@ castConsistentScopesSubst
 castConsistentScopesSubst _ _ ss = ss
 
 {-@
+// Reciprocal of castConsistentScopesSubst, which is used to prove that
+// a substitution has consistent scopes if it range does.
 assume lemmaConsistentScopesSubst
   :: m:_
   -> ss:Subst {t:_ | consistentScopesTerm m t}
@@ -456,7 +453,7 @@ skolemize sf (Exists v f) = do
     let u = if IntMap.member v m then freshVar (Set.fromList (IntMap.keys m)) else v
         m' = IntMap.insert u sf m
     put m'
-    let subst = fromListSubst [(v, SA (u, fromSetIdSubst sf))]
+    let subst = fromListSubst sf m [(v, SA (u, fromSetIdSubst sf))]
     skolemize sf (substituteFormula sf m' subst f)
 skolemize sf (Conj f1 f2) = do
      f1' <- skolemize sf f1
@@ -500,7 +497,7 @@ unify s m f@(Then (t0, t1) f2) = do
     case substEq s m t0 t1 of
       Nothing -> Just []
       Just xs ->
-        let subst = fromListSubst2 s m xs
+        let subst = fromListSubst s m xs
          in unify s m (substituteFormula s m subst f2)
 unify s m (Eq t0 t1) = unifyEq s m t0 t1
 
@@ -522,7 +519,7 @@ substEq _ _ t0 (V i) = Just [(i, t0)]
 substEq s m (L t0) (L t1) = substEq s m t0 t1
 substEq s m (P t0a t0b) (P t1a t1b) = do
     substT0a <- substEq s m t0a t1a
-    let ss = fromListSubst2 s m substT0a
+    let ss = fromListSubst s m substT0a
     substT0b <- substEq s m (substitute s m ss t0b) (substitute s m ss t1b)
     return $ substT0a ++ substT0b
 substEq _ _ U U = Just []
@@ -609,11 +606,11 @@ inverseSubst
   -> _
   -> Maybe
       ({v:Subst {t:_ | isVar t && consistentScopesTerm m t} |
-         Set_com Set.empty == domain v
+         s == domain v
        })
 @-}
 inverseSubst :: Set Int -> IntMap (Set Int) -> Subst Term -> Maybe (Subst Term)
-inverseSubst s m (Subst xs) = fromListSubst <$> go xs
+inverseSubst s m (Subst xs) = fromListSubstInverse s m <$> go xs
   where
     {-@
     go :: _
@@ -627,6 +624,21 @@ inverseSubst s m (Subst xs) = fromListSubst <$> go xs
        -- @consistentScopesTerm m (V i)@
        return ((j, V i ? skip ()) : xs')
     go _ = Nothing
+
+{-@
+// Like fromListSubst, but specialized for the conditions needed in
+// inverseSubst.
+assume fromListSubstInverse
+  :: s:_
+  -> m:_
+  -> [(Var, {t:Term | isVar t && consistentScopesTerm m t})]
+  -> {v:Subst {t:_ | isVar t && consistentScopesTerm m t} |
+         s == domain v
+     }
+@-}
+fromListSubstInverse
+  :: Set Int -> IntMap (Set Int) -> [(Var, Term)] -> Subst Term
+fromListSubstInverse _ _ = Subst
 
 {-@
 substituteSkolems
@@ -677,11 +689,30 @@ substituteSkolemsTerm s m t ss = case t of
       -- BUG?: This looks like it could be checking that freeVars (snd p)
       -- is a subset of domain s1. But for some reason it doesn't.
       Just p -> substitute s m s1 (snd p ? skip ())
-      Nothing -> let subst = fromListSubst2 s m ss
-                  in SA (v, composeSubst s m subst s1)
+      Nothing -> SA (v, substituteSkolemsSubst s m ss s1)
     U -> U
     L t1 -> L (substituteSkolemsTerm s m t1 ss)
     P t1 t2 -> P (substituteSkolemsTerm s m t1 ss) (substituteSkolemsTerm s m t2 ss)
+
+{-@
+// the postcondition should hold because the terms in the range of the
+// substitution are consistent with the same map of scopes.
+ignore substituteSkolemsSubst
+assume substituteSkolemsSubst
+  :: s:_
+  -> m:_
+  -> [{p:(Var, {t:Term | consistentScopesTerm m t}) |
+           isSubsetOfJustOrNothing
+             (freeVars (snd p))
+             (IntMap.lookup (fst p) m)
+         }]
+  -> ss:Subst Term
+  -> {v:ConsistentScopedSubst s m |  domain v == domain ss}
+@-}
+substituteSkolemsSubst
+  :: Set Int -> IntMap (Set Int) -> [(Var, Term)] -> Subst Term -> Subst Term
+substituteSkolemsSubst s m ss (Subst xs) =
+    Subst [(i, substituteSkolemsTerm s m t ss) | (i, t) <- xs]
 
 {-@ assume findPair :: a:_ -> [(a, b)] -> Maybe ({ra:_ | ra = a}, b) @-}
 findPair :: Eq a => a -> [(a, b)] -> Maybe (a, b)
@@ -764,6 +795,8 @@ lemmaConsistentSupersetTerm m0 m1 (P t0 t1) =
     ? lemmaConsistentSupersetTerm m0 m1 t1
 
 {-@
+// Should hold because the successful lookups on m0 should return the same
+// values as the successful lookups in m1, since m0 is a submap of m1.
 assume lemmaConsistentSupersetSubst
   :: m0:_
   -> {m1:_ | intMapIsSubsetOf m0 m1}
