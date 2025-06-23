@@ -125,7 +125,7 @@
 
 SMT solvers are useful to the ordinary activity of
 programming. This is what we would like to convince the reader of. More
-precisely, our claim is that an SMT solver well-integrated in the static checks
+precisely, our claim is that an SMT solver, well-integrated in the static checks
 of a compiler, complements an ordinary type checker when composing programs.
 
 The experience of programming with types is that of collaborating with the
@@ -206,7 +206,7 @@ The rapier wasn't enough, however, for \citet{maclaurin23} who report that
 despite using the rapier they struggled with frequent scope issues in their
 compiler. They set out to enforce the scope properties of the rapier with
 Haskell's type system. A stunt that has often been attempted, but
-\cite{maclaurin23}'s approach, that they name \emph{the foil}, is probably the
+\citeauthor{maclaurin23}'s approach, that they name \emph{the foil}, is probably the
 first to succeed at enforcing such invariants without incurring an unreasonable
 amount of boilerplate.
 
@@ -232,9 +232,10 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 \Citeauthor{maclaurin23} propose a library with types \tc{Scope n}, \tc{Name n}, and
 \tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
 the type index \tc{n} is the name of the set at the type level. A value of type \tc{Name n} is a name that
-belongs to the set with type \tc{Scope n}. A value of type \tc{NameBinder n l} is
-a name in the set with type \tc{Scope l} which results from adding such single
-name to the set with type \tc{Scope n}. These types are to be used in
+belongs to the scope set \tc{n}. A value of type \tc{NameBinder n l} is
+a name \tc{b} such that addint \tc{b} to scope set \tc{n} results in the scope
+set \tc{l}.
+These types are to be used in
 the abstract syntax tree of terms:
 
 \begin{quotation}
@@ -357,9 +358,7 @@ and with the result in this manner. This obviates the need, in particular, to
 give a type-level name to arguments using existential quantification.
 
 To define purely logic function, Liquid Haskell uses the \tc{measure} keyword,
-such as:\improvement{Unfortunately, I couldn't think of a measure from the
-  Liquid Haskell standard library that we use. So I resorted to take a random
-  one from Set instead (which is also the only one from Set).}
+such as:
 \begin{verbatim}
 measure listElts :: [a] -> Set a
   listElts []     = {v | (Set_emp v)}
@@ -462,10 +461,7 @@ consistent with \tc{fromListSubst} whose domain contains all possible variables 
 
 Notice that the logical function \tc{domain}, which stands for the set of
 variables that the substitution defines, is uninterpreted. It must be since it's an
-assumption.\unsure{Something which could be part of the discussion
-  section at the end of the article, I think, is how do you actually instantiate
-  these axioms with an concrete substitution type? Answer: Sounds good, you copy
-  the assumptions to address whatever substitution representation is needed.}
+assumption.
 
 We can give now the following signature to \tc{substitute}
 \begin{verbatim}
@@ -506,12 +502,7 @@ The type of lambda terms is also unchanged, as the well-scoping invariant is
 applied to a whole term at once. A nice consequence of it is that functions
 that don't benefit from all the scope checking business can simply take a naked
 term and ignore it. The \tc{freeVars} function, for example, is implemented on
-naked terms.\unsure{I'm considering adding a comment on the fact that we can use
-  freeVars to provide an initial scope for the substitute function. Note:
-  the foil starts with an identity substitution, that is, one that maps every
-  variable to itself. And we do the same in our unification code. The substitution
-  domain can be narrowed if desired, but starting with the identity doesn't affect
-  the static checks.}
+naked terms.
 
 \subsection{A hybrid approach}
 \label{ensuring-the-scope-set-is-checked}
@@ -571,9 +562,8 @@ Haskell precisely that \tc{withRefreshed} does both membership checking and
 fresh variable call: the variable returned by \tc{withRefreshed} isn't in the
 old scope but is in the new scope.
 
-It then suffices to seal the type \tc{Scope} to enforce that binders are always
-refreshed when traversed. The users are discouraged from manipulating directly
-the scope representation that we chose, so \tc{withRefreshed} remains the only
+It make the type \tc{Scope} abstract to enforce that binders are always
+refreshed when traversed, as \tc{withRefreshed} is the only
 way to test for membership and to extend a scope. This is why we define a
 \tc{Member} predicate alias, only available in the logic, but provide no
 \tc{member} function in Haskell for \tc{Scope}s.
@@ -702,7 +692,7 @@ Now that we have established the refined rapier interface, let us show how it
 can be applied to a more realistic example: solving first-order equational
 formulas. Specifically, we'll be solving a form of Horn clauses in
 the Herbrand domain. This is the sort of unification problem which can show up
-when typechecking programs with GADTs~\cite{schrijvers09}. Scope management in
+when type-checking programs with GADTs~\cite{schrijvers09}. Scope management in
 such a solver is a much trickier business than in the case of mere substitutions
 and, in the authors' experience, something where any help from the compiler is welcome.
 The source code of this section can be found in the file
@@ -853,7 +843,7 @@ condition is that the skolem \tc{i} should not occur in the solution
 \tc{t'}, we might not find solutions if we cannot invert the
 substitution. This implementation only inverts substitutions where
 variables are mapped to variables. That is, we solve $(f, [z:=x]) = L(L(x))$
-to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L(L(x)))$.
+to get the solution $(f, L(L(z)))$ but we do not try solving, say, $(f, [z:=L(x)]) = L(L(x)))$.
 
 
 \subsection{A look at skolemization}
@@ -861,8 +851,8 @@ to get the solution $(f, L(L(z)))$ but we do not try solving $(f, [z:=L(x)]) = L
 
 Figure~\ref{skolemization} shows the function to replace existential quantifiers
 with unification variables. This example is interesting because the complexity of
-managing two different scopes for universal and existential quantifiers
-respectively exceeds considerably the canonical example of the rapier.
+managing the scopes for both universal and existential quantifiers
+considerably exceeds the canonical example of the rapier.
 
 \begin{figure}
 \begin{verbatim}
@@ -896,20 +886,17 @@ skolemize _ f@Eq{} = pure f
 \label{skolemization}
 \end{figure}
 
-To begin with, the function takes a set \tc{sf} of variables that have been
-introduced with universal quantification, and that can appear free in the
-input formula. The finite map \tc{m} in the monadic state contains the variables
-that have been introduced with existential quantification together with their
-scopes, that is, the universally quantified variables in scope at each existential
+The \tc{skolemize} function takes a set \tc{sf} as an argument as well as a
+finite map \tc{m} as the state of a state monad. The set \tc{sf} is the scope set
+of variables that have been
+introduced with universal quantification, and can appear free in the
+input formula. The finite map \tc{m} contains the variables
+that have been introduced with existential quantification together with their own
+scopes, that is, the universally quantified variables in scope at the original existential
 binder.
 
-We expect the set \tc{sf} to be a subset of the keys in \tc{m}. This is to reflect the
-fact that, for debugging purposes, we don't want unification variables to be called the same as
-universally quantified variables. It is not a strict requirement, but one
-that makes the output of \tc{skolemize} considerably easier to read.
-
-We also really need to put the map \tc{,} in the monadic state, as we don't
-want to generate the same unification variable for existentials appearing
+We pass the map \tc{m} as a monadic state, because we don't
+want to generate the same unification variable for existential binders appearing
 on different subformulas, since unification variables scope over the entire formula. For instance, the following formula
 $$\forall x. \exists y. x = y \land \forall z. \exists y. z = y$$
 should produce unification variables like
@@ -917,7 +904,12 @@ $$\forall x. x = y[x:=x] \land \forall z. z = w[x:=x, z:=z]$$
 It would be a mistake to call both unification variables $y$ and $w$ the same.
 Their occurrences even have different scopes!
 
-Lastly, we do need to keep the scope set \tc{sf} separate from the monadic
+We expect the set \tc{sf} to be a subset of the keys in \tc{m}. This is to reflect the
+fact that, for debugging purposes, we don't want unification variables to be called the same as
+universally quantified variables. It is not a strict requirement, but one
+that makes the output of \tc{skolemize} considerably easier to read.
+
+Yet, we do need to keep the scope set \tc{sf} separate from the monadic
 state because it is needed to construct the skolem function applications where
 existential variables are found.
 
@@ -959,12 +951,12 @@ Which leads us to our next principle
 \end{principle}
 
 Liquid Haskell helpfully lets us treat the state monad as equipped with
-Hoare triples \tc{State<pre,post>}. The supporting code for the refined state
+a Hoare logic \tc{State<pre,post>}. The supporting code for the refined state
 monad is not readily available in Liquid Haskell. It probably should be, but in
 the meantime, it can be found in Liquid Haskell's test suite, so we simply
 copied it in the file \sourcefile{State.hs}.
 
-The main conjuncts of the postconditon are \tc{consistent\-unification\-Scopes v} and
+The main conjuncts of the postconditon are \tc{consistent\-Scopes m v} and
 \tc{existsCount v = 0}, the rest are invariants used by the recursive calls of
 \tc{skolemize}.
 \begin{itemize}
@@ -972,7 +964,7 @@ The main conjuncts of the postconditon are \tc{consistent\-unification\-Scopes v
   existential quantifiers. As it is a requirement of \tc{unify}.
   \item \tc{consistentScopes m v} means that \tc{skolemize} returns a
   formula $F$ such that all the occurrences of any unification variable $i$ in $F$
-  have the scope as reported by \tc{m}. This is our main scope invariant for this
+  have an attached substitution whose domain is the scope of $i$ as reported by \tc{m}. This is our main scope invariant for this
   section.
 \end{itemize}
 
@@ -981,12 +973,11 @@ in the state instead of a finite map, the map choice makes easier to express the
 consistency of the unification scopes. Changing the functions to make them easier
 to explain is a topic which we will find again later on.
 
-This version of \tc{skolemize} cannot be checked with Liquid Haskell because of
-transient limitations of the tooling, so we assume the refinement type signature
-by resorting to the principle of only checking what is cost-effective. The rest
+This signature for \tc{skolemize} cannot be checked with Liquid Haskell today
+due to
+a bug, so we ended up assuming the refinement type signature
+in keeping with the principle of only checking what is cost-effective. The rest
 of the code doesn't benefit less because of it.
-\unsure{Arnaud removed the paragraph on stuff hanging. Maybe we want to discuss this
-  limitation in the conclusion. Facundo added a rephrasing of it again here.}
 
 % We won't discuss the checking process for this function, as examples follow
 % which  don't require the burden of explaining the mechanisms for
@@ -1000,9 +991,9 @@ of the code doesn't benefit less because of it.
 \label{checking-unifyEq}
 
 Let us now turn to the \tc{unifyEq} function, which is a traditional unification
-function: it takes an equation and returns a list of unifications.
-We start introducing static checks by providing a refinement type signature to
-the function \tc{unifyEq}, which encodes the scope check, the occurs check,
+function: it takes an equation and returns definitions for its unification
+variables.
+The refined signature that we give to \tc{unifyEq} statically enfoces scope checks, occurs checks,
 and the consistency of scopes in the result and in the arguments.
 
 \begin{verbatim}
@@ -1023,9 +1014,9 @@ unifyEq
          }]
 \end{verbatim}
 
-The predicate \tc{consistentScopesTerm} is only used in refinement types, and
-checks that the scopes of the unification variables in a term have the scopes
-as defined by the given map.
+The predicate \tc{consistentScopesTerm s m} is only used in refinement types, and
+checks that the domains of the unification variables' substitutions in a term
+\tc{s} are the scopes given by \tc{m}.
 
 \begin{verbatim}
 consistentScopesTerm :: IntMap (Set Int) -> Term -> Bool
@@ -1043,26 +1034,25 @@ consistentScopesSubst m (Subst xs) =
     all (\(_, t) -> consistentScopesTerm m t) xs
 \end{verbatim}
 
-The interesting case is the one of skolem function applications, where the
-predicate only holds if the domain of the suspended substitution agrees
-with the finite map \tc{m}. Crucially, this ensures that different
-occurrences of the same unification variable cannot have different scopes.
-
 We would like to draw the reader's attention to the parameters of \tc{s}
 and \tc{m} in the refinement type signature of the \tc{unifyEq} function,
 conspicuously absent in the implementation of
 Figure~\ref{conditional-unification}. This is because, in the source code,
 we have extended the implementation of \tc{unifyEq} and many other functions
-with these parameters. They do not play any role in the behavior of the
-functions, but they simplify a great deal expressing the consistency of
-scopes, which constitute our next principle.
+with these parameters. We could reconstruct these scope assumptions in the
+functions' preconditions, but it's more involved, and requires a great deal more
+lemmas to convince the SMT solver.
 
 \begin{principle}
-  In order to streamline the expression of the properties to check, identify
-  any implicit knowledge that is missing from the inputs of a function, and
-  consider making this knowledge explicit by enriching the input.
+  It's easier both for an SMT solver and to express properties to begin with to
+  use explicit assumptions rather than reconstructing implicit assumptions.
+  Don't hesitate to pass assumptions as arguments to functions, even if those
+  arguments aren't used by the function.
 \end{principle}
-\unsureF{Is this insightful enough? You mention the rapier might have been inspired by something like this}
+
+Note that compilers typically remove such obviously unused arguments during
+compilation. GHC certainly does. So there's essentially no computational cost to
+these extra arguments anyway.
 
 % We would like to draw the reader's attention to the precondition
 % \begin{verbatim}
@@ -1097,104 +1087,6 @@ scopes, which constitute our next principle.
 %     consistentSkolemScopesTerm t0 && consistentSkolemScopesTerm t1
 %     && unionCommutes (scopesTerm t0) (scopesTerm t1)
 % \end{verbatim}
-
-As a side note, \tc{unifyEq} is an example of a function whose code needs to be
-annotated to help the Liquid Haskell check the refined signature. We only needed
-a few lemmas for this study. Here's one of them. It establishes an
-expectation on the meaning of the \tc{consistentScopesSubst} predicate.
-
-\begin{verbatim}
-{-@
-assume lemmaConsistentScopesSubst
-  :: m:_
-  -> ss:Subst {t:_ | consistentScopesTerm m t}
-  -> { consistentScopesSubst m ss}
-@-}
-lemmaConsistentScopesSubst :: IntMap (Set Int) -> Subst Term -> ()
-lemmaConsistentScopesSubst _ _ = ()
-\end{verbatim}
-
-This lemma could be proved if we committed to a particular representation of the
-\tc{Subst} type. But here we leave it as a requirement for the integration of
-implementations of \tc{Subst}.\unsureF{Can we have a principle to use assumptions to define integration properties?}
-
-Lemmas are ordinary functions, Liquid Haskell doesn't automatically make use of
-them, but it comes with an idiom. When you want to ask Liquid
-Haskell to use a lemma when checking the expected refinement type of an expression
-\tc{e}, you are to invoke the lemma as
-\begin{verbatim}
-e ? lemmaConsistentScopesSubst
-\end{verbatim}
-The changes to \tc{unifyEq} are annotations of this form, where \tc{?} has no
-effect when executing the program. In the case of the \tc{unifyEq} function,
-it would be inserted as follows.
-
-\begin{verbatim}
- unifyEq t0 t1@(SA (i, s))
-   | Just s' <- inverseSubst $ narrowForInvertibility (freeVars t0) s
--  , let t' = substitute s' t0
-+  , let t' = substitute (s' ? lemmaConsistentScopesSubst m s') t0
-   , not (Set.member i (skolemSet t'))
-   , Set.isSubsetOf (freeVars t') (domain s)
-   = Just [(i, t')]
-\end{verbatim}
-
-For a lemma that we do need to prove, we can look at \tc{lemma\-Consistent\-Superset}.
-This lemma checks our intuition that if a formula has consistent scopes for
-a given finite map \tc{m0}, it also should be consistent with any finite map
-that is a superset of \tc{m0}.
-
-\begin{verbatim}
-lemmaConsistentSuperset
-  :: m0:IntMap (SetInt)
-  -> {m1:IntMap (Set Int) | intMapIsSubsetOf m0 m1}
-  -> {f:Formula | consistentScopes m0 f}
-  -> {consistentScopes m1 f}
-\end{verbatim}
-
-The function \tc{consistentScopes} does for formulas what \tc{consistentScopesTerm}
-does for terms. The proof of this lemma is a regular and rather straightforward
-recursive function.
-
-\begin{verbatim}
-lemmaConsistentSuperset
-  :: IntMap (Set Int) -> IntMap (Set Int) -> Formula -> ()
-lemmaConsistentSuperset m0 m1 (Forall _ f) =
-    lemmaConsistentSuperset m0 m1 f
-lemmaConsistentSuperset m0 m1 (Exists _ f) =
-    lemmaConsistentSuperset m0 m1 f
-lemmaConsistentSuperset m0 m1 (Conj f1 f2) =
-      lemmaConsistentSuperset m0 m1 f1
-    ? lemmaConsistentSuperset m0 m1 f2
-lemmaConsistentSuperset m0 m1 (Then (t0, t1) f2) =
-      lemmaConsistentSupersetTerm m0 m1 t0
-    ? lemmaConsistentSupersetTerm m0 m1 t1
-    ? lemmaConsistentSuperset m0 m1 f2
-lemmaConsistentSuperset m0 m1 (Eq t0 t1) =
-      lemmaConsistentSupersetTerm m0 m1 t0
-    ? lemmaConsistentSupersetTerm m0 m1 t1
-\end{verbatim}
-
-The proof continues in lemma \tc{lemmaConsistentSupersetTerm} in similar fashion
-until it reaches \tc{lemmaConsistentScopesSubst}, another fringe lemma about
-the meaning of scope consistency of substitutions that becomes an integration requirement.
-
-\begin{verbatim}
-assume lemmaConsistentSupersetSubst
-  :: m0:_
-  -> {m1:_ | intMapIsSubsetOf m0 m1}
-  -> {s:_ | consistentScopesSubst m0 s}
-  -> {consistentScopesSubst m1 s}
-\end{verbatim}
-
-The lemma functions are so terse because Liquid Haskell is doing the rote folding
-and unfolding of the \tc{consistentScopes} predicate for every case of formula and
-term, plus the reasoning with the subset relationship of maps. Lemmas like these
-do not only help to check the subject program, but also help keeping in check the
-definition of \tc{consistentScopes}, should it be updated in the
-future.\unsureF{Writing these proofs with AI code autocompletion is a breeze. But
-I don't know if it is worth mentioning.}
-
 
 \subsection{Totality and \tc{unify}}
 \label{checking-unify}
@@ -1319,6 +1211,79 @@ substitution since we only substitute inside terms.
 % all of it automatic except for a lemma similar to \tc{lemmaScopesListSubset} but
 % for the implication equation.
 
+\subsection{Lemmas in Liquid Haskell}
+\label{sec:lh-lemmas}
+
+Another way, besides adding computationally irrelevant arguments, like in the
+previous sections for the refined implementation to differ from its classical
+version is with the addition of lemmas.
+
+Take, for instance, the \tc{unifyFormula} function which ties together
+\tc{skolemize} and \tc{unify}, it differs from its classical implementation as
+follows:
+
+\begin{verbatim}
+unifyFormula :: Set Int -> IntMap (Set Int) -> Formula -> Maybe [(Var, Term)]
+unifyFormula s m f =
+    let m' = qvToScopes s m
+-       skf = skolemize s f
++       skf = skolemize s f ? lemmaConsistentSuperset m m' f
+        (f'', m'') = runState skf m'
+     in unify s m'' f''
+\end{verbatim}
+
+This idiom \tc{e?p} means ``use lemma \tc{p} when checking \tc{e}''.
+Lemmas aren't used automatically, this is how Liquid
+Haskell is instructed to use them.
+
+Lemmas, in Liquid Haskell, are ordinary functions. Proofs by inductions arise
+from ordinary (total!) recursion. In the case of \tc{lemmaConsistentSuperset}
+the proof is entirely straightforward
+
+\begin{verbatim}
+lemmaConsistentSuperset
+  :: m0:IntMap (SetInt)
+  -> {m1:IntMap (Set Int) | intMapIsSubsetOf m0 m1}
+  -> {f:Formula | consistentScopes m0 f}
+  -> {consistentScopes m1 f}
+lemmaConsistentSuperset
+  :: IntMap (Set Int) -> IntMap (Set Int) -> Formula -> ()
+lemmaConsistentSuperset m0 m1 (Forall _ f) =
+    lemmaConsistentSuperset m0 m1 f
+lemmaConsistentSuperset m0 m1 (Exists _ f) =
+    lemmaConsistentSuperset m0 m1 f
+lemmaConsistentSuperset m0 m1 (Conj f1 f2) =
+      lemmaConsistentSuperset m0 m1 f1
+    ? lemmaConsistentSuperset m0 m1 f2
+lemmaConsistentSuperset m0 m1 (Then (t0, t1) f2) =
+      lemmaConsistentSupersetTerm m0 m1 t0
+    ? lemmaConsistentSupersetTerm m0 m1 t1
+    ? lemmaConsistentSuperset m0 m1 f2
+lemmaConsistentSuperset m0 m1 (Eq t0 t1) =
+      lemmaConsistentSupersetTerm m0 m1 t0
+    ? lemmaConsistentSupersetTerm m0 m1 t1
+\end{verbatim}
+
+So straightforward, in fact that the proof was largely written by AI-based code
+completion. Since lemmas don't have computational content (\tc{\{p\}} is a
+shorthand for \tc{\{\_::() | p \}}), we only care about the existence of a
+proof, making code completion particularly useful. Liquid Haskell understanding
+theory of finite map (see Section~\ref{extending-liquid-haskell}) is crucial in
+making this proof so terse.
+
+Ultimately, the proof of \tc{lemmaConsistentSupersetTerm} depends on the
+following lemma which we must assume of the substitution data type
+(unsurprisingly, the substitution interface needs to satisfy more properties
+than in Section~\ref{the-rapier-with-refinement-types} to accommodate the
+unification variables' scopes)
+
+\begin{verbatim}
+assume lemmaConsistentSupersetSubst
+  :: m0:_
+  -> {m1:_ | intMapIsSubsetOf m0 m1}
+  -> {s:_ | consistentScopesSubst m0 s}
+  -> {consistentScopesSubst m1 s}
+\end{verbatim}
 
 \subsection{Extending Liquid Haskell to support \tc{IntMap}}
 \label{extending-liquid-haskell}
@@ -1331,12 +1296,14 @@ possible to do without it. In a first approximation we did much of this study in
 vanilla Liquid Haskell. But we lost out on automation: we got more lemmas to prove
 and pass around. Properties like the scope check, or the lemma
 \tc{lemmaConsistentSuperset}, involved operations on finite maps and were more
-convoluted. Thus we arrive at the following principle.
+convoluted.
 
-\begin{principle}
-  SMT solvers are more effective when they can leverage their theories.
-  Prefer writing refinement types by appealing to theories known by your system.
-\end{principle}\unsureF{Arnaud, please check the appropriateness of the introduction of this principle here}.
+% Thus we arrive at the following principle.
+
+% \begin{principle}
+%   SMT solvers are more effective when they can leverage their theories.
+%   Prefer writing refinement types by appealing to theories known by your system.
+% \end{principle}
 
 To support this study, we implemented the theory of finite maps for Liquid
 Haskell. It is not ready to integrate in future release yet, for one thing: we only support finite
@@ -1460,7 +1427,7 @@ set of invariant-preserving operations sufficient to express downstream programs
 None of these functions will benefit from the abstract types invariant, hence
 will be part of the trusted code base. Even when we mix refinement and abstract
 types as in Section~\ref{ensuring-the-scope-set-is-checked}, we don't have quite
-as expensive a trusted code base to consider.
+as large a trusted code base to consider.
 
 This is not to mean that refinement types are superior to type abstractions.
 They are best at enforcing different types of invariants, as discussed in
@@ -1474,7 +1441,7 @@ Haskell, say, doesn't have support for, it may not be that clear and the program
 author may need to mobilize comparable effort for refinement types as she would
 have for an abstract-type encoding.
 
-The type-checker approach, however, is likely to produce error messages that
+A type-checker approach, however, is likely to produce error messages that
 are easier both to understand and to fix, provided that the user goal is feasible.
 The user is guided into correcting the errors
 by the types and the operations of the supporting library. With SMT solvers,
@@ -1718,7 +1685,7 @@ candidate to impact programming practice in the future.
 
 Through our two case studies, we have tried to make a first step in
 understanding how we will be best able to leverage future such tools, even
-in situations where we can manage to use current typecheckers today. As a closing
+in situations where we can manage to use current type-checkers today. As a closing
 note, let us reproduce the principles that we've proposed throughout the article.
 
 \vspace{-0.8cm}
