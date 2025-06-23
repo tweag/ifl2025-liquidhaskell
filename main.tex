@@ -131,7 +131,7 @@ the same way. SMT solvers and type checker are good at enforcing different kinds
 properties, broadening the ways in which we can design our programs.
 
 SMT solvers, when it comes to their application to programming, are usually
-paired, in the literature, with terms like ``formal methods'' or
+paired in the literature with terms like ``formal methods'' or
 ``verification''~\cite{barnett05,demoura08,zinzin17,swamy22,filli13,leino17}. We
 would like to challenge the wisdom that we reach for SMT-solver-based tools when
 we need formal methods. We would benefit from using SMT solvers in mundane
@@ -157,7 +157,7 @@ Section~\ref{extending-liquid-haskell}.
 \label{capture-avoiding-substitution}
 
 Binding scope management is recognized as a persistent annoyance when writing compilers.
-It's easy to get wrong and is a source of mistake to the point that many have
+It's easy to get wrong and is a source of mistakes to the point that many have
 proposed disciplines to prevent mismanagement of scopes, like name capture.
 The poster child is substitution, like in
 $(\lambda x. y)[y:=t]$. The result of this substitution is $\lambda x. t$.
@@ -896,7 +896,7 @@ of variables that have been
 introduced with universal quantification, and can appear free in the
 input formula. The finite map \tc{m} contains the variables
 that have been introduced with existential quantification together with their own
-scopes, that is, the universally quantified variables in scope at the original existential
+scopes. That is, the universally quantified variables in scope at the original existential
 binder.
 
 We pass the map \tc{m} as a monadic state, because we don't
@@ -1018,9 +1018,9 @@ unifyEq
          }]
 \end{verbatim}
 
-The predicate \tc{consistentScopesTerm s m} is only used in refinement types, and
+The predicate \tc{consistentScopesTerm m t} is only used in refinement types, and
 checks that the domains of the unification variables' substitutions in a term
-\tc{s} are the scopes given by \tc{m}.
+\tc{t} are the scopes given by \tc{m}.
 
 \begin{verbatim}
 consistentScopesTerm :: IntMap (Set Int) -> Term -> Bool
@@ -1552,13 +1552,13 @@ of its users.
 
 On the performance front, all of the SMT-LIB queries in the unification example run
 in 11 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
-That is sometimes faster than it takes to compile a module with the GHC compiler.
+That is sometimes faster than compiling a module with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell end-to-end, which spends several seconds checking the examples and interacting with the
 SMT solver (3 minutes when checking unification, 4 seconds checking \tc{Subst2.hs},
 1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
 can be improved to approach that of the SMT solver queries, and probably further by
-reducing the amount of queries.
+reducing the number of queries.
 
 % Liquid Haskell ensures most requirements with little assistance
 % because it is delegating much of the work to an underlying SMT solver.
