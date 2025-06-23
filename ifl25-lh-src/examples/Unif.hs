@@ -688,7 +688,9 @@ substituteSkolemsTerm s m t ss = case t of
     SA (v, s1) -> case findPair v ss of
       -- BUG?: This looks like it could be checking that freeVars (snd p)
       -- is a subset of domain s1. But for some reason it doesn't.
-      Just p -> substitute s m s1 (snd p ? skip ())
+      Just p ->
+        let t' = substitute s m s1 (snd p ? skip ())
+         in substituteSkolemsTerm s m t' ss
       Nothing -> SA (v, substituteSkolemsSubst s m ss s1)
     U -> U
     L t1 -> L (substituteSkolemsTerm s m t1 ss)
