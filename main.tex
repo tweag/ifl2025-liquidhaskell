@@ -417,17 +417,15 @@ first principle of programming with refinement types:
 \begin{principle}
   In general, refinement types allow to reduce the trusted code base, but they also offer
     you a choice. When its easier to prove a result by
-    hand than with the SMT solver, you should assume the property.
+    hand than with the SMT solver, you can assume the property and
+    justify it informally.
 \end{principle}
 
-Note that \tc{assume} is safe, in the sense that if a program assumes an
-incorrect assumption, it will not yield to any memory corruption. The program
-will still run, it may just return incorrect or unexpected values. In that
-sense, \tc{assume} is akin to adding a function to an abstract type: it's type
-safe, even though the type-checker cannot ensures that it preserves the abstract
-type's invariants. This is a way in which refinement types differ from types
-greatly: bypassing the type-checker and assuming the wrong type (\emph{e.g.}
-with \tc{unsafePerformIO} in Haskell) will cause memory corruptions.
+It is good discipline to justify systematically why assumptions should hold.
+An incorrect assumption could make Liquid Haskell accept programs that don't
+meet the properties we mean to check. The consequences range through the whole
+gamut from incorrect results, to security vulnerabilities and crashes, depending
+on the kind of checks.
 
 That's it, this is the entirety of our trusted code base for this example. For
 the most part, it required thinking about what properties we wanted to enforce,
