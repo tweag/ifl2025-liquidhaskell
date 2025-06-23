@@ -1577,11 +1577,11 @@ Gamboa et al.~\cite{gamboa25} report on a study that collects the voices
 of its users.
 
 On the performance front, all of the SMT-LIB queries in the unification example run
-in 9 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
+in 11 seconds, 0.04 seconds for \tc{Subst2.hs}, and 0.03 seconds in \tc{Subst1.hs}.
 That is sometimes faster than it takes to compile a module with the GHC compiler.
 Where things get slower is when measuring Liquid
 Haskell end-to-end, which spends several seconds checking the examples and interacting with the
-SMT solver (54 seconds when checking unification, 4 seconds checking \tc{Subst2.hs},
+SMT solver (3 minutes when checking unification, 4 seconds checking \tc{Subst2.hs},
 1.5 seconds checking \tc{Subst1.hs}). The authors deem that performance of Liquid Haskell
 can be improved to approach that of the SMT solver queries, and probably further by
 reducing the amount of queries.
