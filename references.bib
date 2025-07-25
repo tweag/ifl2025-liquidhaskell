@@ -1,0 +1,478 @@
+@TECHREPORT{BarFT-RR-25,
+  author =	 {Clark Barrett and Pascal Fontaine and Cesare Tinelli},
+  title =	 {{The SMT-LIB Standard: Version 2.7}},
+  institution =	 {Department of Computer Science, The University of Iowa},
+  year =	 2025,
+  note =	 {Available at {\tt www.SMT-LIB.org}}
+}
+
+@article{liu20,
+author = {Liu, Yiyun and Parker, James and Redmond, Patrick and Kuper, Lindsey and Hicks, Michael and Vazou, Niki},
+title = {Verifying replicated data types with typeclass refinements in Liquid Haskell},
+year = {2020},
+issue_date = {November 2020},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {4},
+number = {OOPSLA},
+url = {https://doi.org/10.1145/3428284},
+doi = {10.1145/3428284},
+abstract = {This paper presents an extension to Liquid Haskell that facilitates stating and semi-automatically proving properties of typeclasses. Liquid Haskell augments Haskell with refinement types—our work allows such types to be attached to typeclass method declarations, and ensures that instance implementations respect these types. The engineering of this extension is a modular interaction between GHC, the Glasgow Haskell Compiler, and Liquid Haskell’s core proof infrastructure. The design sheds light on the interplay between modular proofs and typeclass resolution, which in Haskell is coherent by default (meaning that resolution always selects the same implementation for a particular instantiating type), but in other dependently typed languages is not. We demonstrate the utility of our extension by using Liquid Haskell to modularly verify that 34 instances satisfy the laws of five standard typeclasses. More substantially, we implement a framework for programming distributed applications based on replicated data types (RDTs). We define a typeclass whose Liquid Haskell type captures the mathematical properties RDTs should satisfy; prove in Liquid Haskell that these properties are sufficient to ensure that replicas’ states converge despite out-of-order update delivery; implement (and prove correct) several instances of our RDT typeclass; and use them to build two realistic applications, a multi-user calendar event planner and a collaborative text editor.},
+journal = {Proc. ACM Program. Lang.},
+month = nov,
+articleno = {216},
+numpages = {30},
+keywords = {typeclasses, replicated data types, refinement types, Liquid Haskell, CRDTs}
+}
+
+@Article{grannan22,
+  author =	{Grannan, Zachary and Vazou, Niki and Darulova, Eva and Summers, Alexander J.},
+  title =	{{REST: Integrating Term Rewriting with Program Verification (Artifact)}},
+  pages =	{12:1--12:2},
+  journal =	{Dagstuhl Artifacts Series},
+  ISSN =	{2509-8195},
+  year =	{2022},
+  volume =	{8},
+  number =	{2},
+  editor =	{Grannan, Zachary and Vazou, Niki and Darulova, Eva and Summers, Alexander J.},
+  publisher =	{Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
+  address =	{Dagstuhl, Germany},
+  URL =		{https://drops.dagstuhl.de/entities/document/10.4230/DARTS.8.2.12},
+  URN =		{urn:nbn:de:0030-drops-162105},
+  doi =		{10.4230/DARTS.8.2.12},
+  annote =	{Keywords: term rewriting, program verification, theorem proving}
+}
+
+@article{vazou14,
+author = {Vazou, Niki and Seidel, Eric L. and Jhala, Ranjit},
+title = {LiquidHaskell: experience with refinement types in the real world},
+year = {2014},
+issue_date = {December 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {49},
+number = {12},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2775050.2633366},
+doi = {10.1145/2775050.2633366},
+abstract = {Haskell has many delightful features. Perhaps the one most beloved by its users is its type system that allows developers to specify and verify a variety of program properties at compile time. However, many properties, typically those that depend on relationships between program values are impossible, or at the very least, cumbersome to encode within the existing type system. Many such properties can be verified using a combination of Refinement Types and external SMT solvers. We describe the refinement type checker liquidHaskell, which we have used to specify and verify a variety of properties of over 10,000 lines of Haskell code from various popular libraries, including containers, hscolour, bytestring, text, vector-algorithms and xmonad. First, we present a high-level overview of liquidHaskell, through a tour of its features. Second, we present a qualitative discussion of the kinds of properties that can be checked -- ranging from generic application independent criteria like totality and termination, to application specific concerns like memory safety and data structure correctness invariants. Finally, we present a quantitative evaluation of the approach, with a view towards measuring the efficiency and programmer effort required for verification, and discuss the limitations of the approach.},
+journal = {SIGPLAN Not.},
+month = sep,
+pages = {39–51},
+numpages = {13},
+keywords = {verification, smt-based verification, refinement types, Haskell}
+}
+
+@misc{zinzin17,
+      author = {Jean Karim Zinzindohoué and Karthikeyan Bhargavan and Jonathan Protzenko and Benjamin Beurdouche},
+      title = {{HACL}*: A Verified Modern Cryptographic Library},
+      howpublished = {Cryptology {ePrint} Archive, Paper 2017/536},
+      year = {2017},
+      url = {https://eprint.iacr.org/2017/536}
+}
+
+@inproceedings{swamy22,
+author = {Swamy, Nikhil and Ramananandro, Tahina and Rastogi, Aseem and Spiridonova, Irina and Ni, Haobin and Malloy, Dmitry and Vazquez, Juan and Tang, Michael and Cardona, Omar and Gupta, Arti},
+title = {Hardening attack surfaces with formally proven binary format parsers},
+year = {2022},
+isbn = {9781450392655},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3519939.3523708},
+doi = {10.1145/3519939.3523708},
+abstract = {With an eye toward performance, interoperability, or legacy concerns, low-level system software often must parse binary encoded data formats. Few tools are available for this task, especially since the formats involve a mixture of arithmetic and data dependence, beyond what can be handled by typical parser generators. As such, parsers are written by hand in languages like C, with inevitable errors leading to security vulnerabilities.
+
+Addressing this need, we present EverParse3D, a parser generator for binary message formats that yields performant C code backed by fully automated formal proofs of memory safety, arithmetic safety, functional correctness, and even double-fetch freedom to prevent certain kinds of time-of-check/time-of-use errors. This allows systems developers to specify their message formats declaratively and to integrate correct-by-construction C code into their applications, eliminating several classes of bugs.
+
+EverParse3D has been in use in the Windows kernel for the past year. Applied primarily to the Hyper-V network virtualization stack, the formats of nearly 100 different messages spanning four protocols have been specified in EverParse3D and the resulting formally proven parsers have replaced prior handwritten code. We report on our experience in detail.},
+booktitle = {Proceedings of the 43rd ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+pages = {31–45},
+numpages = {15},
+keywords = {Formal proofs, Network formats, Parser generators},
+location = {San Diego, CA, USA},
+series = {PLDI 2022}
+}
+
+@inproceedings {lehmann21,
+author = {Nico Lehmann and Rose Kunkel and Jordan Brown and Jean Yang and Niki Vazou and Nadia Polikarpova and Deian Stefan and Ranjit Jhala},
+title = {{STORM}: Refinement Types for Secure Web Applications},
+booktitle = {15th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 21)},
+year = {2021},
+isbn = {978-1-939133-22-9},
+pages = {441--459},
+url = {https://www.usenix.org/conference/osdi21/presentation/lehmann},
+publisher = {{USENIX} Association},
+month = jul
+}
+
+@inproceedings{redmond23,
+author = {Redmond, Patrick and Shen, Gan and Vazou, Niki and Kuper, Lindsey},
+title = {Verified Causal Broadcast with Liquid Haskell},
+year = {2023},
+isbn = {9781450398312},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3587216.3587222},
+doi = {10.1145/3587216.3587222},
+abstract = {Protocols to ensure that messages are delivered in causal order are a ubiquitous building block of distributed systems. For instance, distributed data storage systems can use causally ordered message delivery to ensure causal consistency, and CRDTs can rely on the existence of an underlying causally-ordered messaging layer to simplify their implementation. A causal delivery protocol ensures that when a message is delivered to a process, any causally preceding messages sent to the same process have already been delivered to it. While causal delivery protocols are widely used, verification of their correctness is less common, much less machine-checked proofs about executable implementations. We implemented a standard causal broadcast protocol in Haskell and used the Liquid Haskell solver-aided verification system to express and mechanically prove that messages will never be delivered to a process in an order that violates causality. We express this property using refinement types and prove that it holds of our implementation, taking advantage of Liquid Haskell’s underlying SMT solver to automate parts of the proof and using its manual theorem-proving features for the rest. We then put our verified causal broadcast implementation to work as the foundation of a distributed key-value store.},
+booktitle = {Proceedings of the 34th Symposium on Implementation and Application of Functional Languages},
+articleno = {6},
+numpages = {13},
+location = {Copenhagen, Denmark},
+series = {IFL '22}
+}
+
+@InProceedings{demoura08,
+author="de Moura, Leonardo
+and Bj{\o}rner, Nikolaj",
+editor="Ramakrishnan, C. R.
+and Rehof, Jakob",
+title="Z3: An Efficient SMT Solver",
+booktitle="Tools and Algorithms for the Construction and Analysis of Systems",
+year="2008",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="337--340",
+abstract="Satisfiability Modulo Theories (SMT) problem is a decision problem for logical first order formulas with respect to combinations of background theories such as: arithmetic, bit-vectors, arrays, and uninterpreted functions. Z3 is a new and efficient SMT Solver freely available from Microsoft Research. It is used in various software verification and analysis applications.",
+isbn="978-3-540-78800-3"
+}
+
+@article{vazou14b,
+author = {Vazou, Niki and Seidel, Eric L. and Jhala, Ranjit and Vytiniotis, Dimitrios and Peyton-Jones, Simon},
+title = {Refinement types for Haskell},
+year = {2014},
+issue_date = {September 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {49},
+number = {9},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2692915.2628161},
+doi = {10.1145/2692915.2628161},
+abstract = {SMT-based checking of refinement types for call-by-value languages is a well-studied subject. Unfortunately, the classical translation of refinement types to verification conditions is unsound under lazy evaluation. When checking an expression, such systems implicitly assume that all the free variables in the expression are bound to values. This property is trivially guaranteed by eager, but does not hold under lazy, evaluation. Thus, to be sound and precise, a refinement type system for Haskell and the corresponding verification conditions must take into account which subset of binders actually reduces to values. We present a stratified type system that labels binders as potentially diverging or not, and that (circularly) uses refinement types to verify the labeling. We have implemented our system in LIQUIDHASKELL and present an experimental evaluation of our approach on more than 10,000 lines of widely used Haskell libraries. We show that LIQUIDHASKELL is able to prove 96\% of all recursive functions terminating, while requiring a modest 1.7 lines of termination-annotations per 100 lines of code.},
+journal = {SIGPLAN Not.},
+month = aug,
+pages = {269–282},
+numpages = {14}
+}
+
+@inproceedings{barnett05,
+author = {Barnett, Mike and Chang, Bor-Yuh Evan and DeLine, Robert and Jacobs, Bart and Leino, K. Rustan M.},
+title = {Boogie: a modular reusable verifier for object-oriented programs},
+year = {2005},
+isbn = {3540367497},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/11804192_17},
+doi = {10.1007/11804192_17},
+abstract = {A program verifier is a complex system that uses compiler technology, program semantics, property inference, verification-condition generation, automatic decision procedures, and a user interface. This paper describes the architecture of a state-of-the-art program verifier for object-oriented programs.},
+booktitle = {Proceedings of the 4th International Conference on Formal Methods for Components and Objects},
+pages = {364–387},
+numpages = {24},
+location = {Amsterdam, The Netherlands},
+series = {FMCO'05}
+}
+
+@article{peytonjones02secrets,
+author = {Peyton Jones, Simon and Marlow, Simon},
+title = {Secrets of the Glasgow Haskell Compiler inliner},
+year = {2002},
+month = {July},
+abstract = {Higher-order languages, such as Haskell, encourage the programmer to build abstractions by composing functions. A good compiler must inline many of these calls to recover an efficiently executable program.
+
+In principle, inlining is dead simple: just replace the call of a function by an instance of its body. But any compiler-writer will tell you that inlining is a black art, full of delicate compromises that work together to give good performance without unnecessary code bloat.
+
+The purpose of this paper is, therefore, to articulate the key lessons we learned from a full-scale ``production'' inliner, the one used in the Glasgow Haskell compiler. We focus mainly on the algorithmic aspects, but we also provide some indicative measurements to substantiate the importance of various aspects of the inliner.
+
+The "Related File" link above is an earlier tech-report version of the paper, but the JFP version is the one to read (the "View publication" button).},
+url = {https://www.microsoft.com/en-us/research/publication/secrets-of-the-glasgow-haskell-compiler-inliner/},
+pages = {393-434},
+journal = {Journal of Functional Programming},
+volume = {12},
+}
+
+@inproceedings{maclaurin23,
+author = {Maclaurin, Dougal and Radul, Alexey and Paszke, Adam},
+title = {The Foil: Capture-Avoiding Substitution With No Sharp Edges},
+year = {2023},
+isbn = {9781450398312},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3587216.3587224},
+doi = {10.1145/3587216.3587224},
+abstract = {Correctly manipulating program terms in a compiler is surprisingly difficult because of the need to avoid name capture. The rapier from Peyton&nbsp;Jones and Marlow [9] is a cutting-edge technique for fast, stateless capture-avoiding substitution for expressions represented with explicit names. It is, however, a sharp tool—its invariants are tricky and need to be maintained throughout the whole compiler that uses it. We describe the foil, an elaboration of the rapier that uses Haskell’s type system to enforce the rapier’s invariants statically, preventing a class of hard-to-find bugs, but without adding any run-time overheads.},
+booktitle = {Proceedings of the 34th Symposium on Implementation and Application of Functional Languages},
+articleno = {8},
+numpages = {10},
+location = {Copenhagen, Denmark},
+series = {IFL '22}
+}
+
+@inproceedings{vazou13,
+author = {Vazou, Niki and Rondon, Patrick M. and Jhala, Ranjit},
+title = {Abstract refinement types},
+year = {2013},
+isbn = {9783642370359},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/978-3-642-37036-6_13},
+doi = {10.1007/978-3-642-37036-6_13},
+abstract = {We present abstract refinement types which enable quantification over the refinements of data- and function-types. Our key insight is that we can avail of quantification while preserving SMT-based decidability, simply by encoding refinement parameters as uninterpreted propositions within the refinement logic. We illustrate how this mechanism yields a variety of sophisticated means for reasoning about programs, including: parametric refinements for reasoning with type classes, index-dependent refinements for reasoning about key-value maps, recursive refinements for reasoning about recursive data types, and inductive refinements for reasoning about higher-order traversal routines. We have implemented our approach in a refinement type checker for Haskell and present experiments using our tool to verify correctness invariants of various programs.},
+booktitle = {Proceedings of the 22nd European Conference on Programming Languages and Systems},
+pages = {209–228},
+numpages = {20},
+location = {Rome, Italy},
+series = {ESOP'13}
+}
+
+@article{schrijvers09,
+author = {Schrijvers, Tom and Peyton Jones, Simon and Sulzmann, Martin and Vytiniotis, Dimitrios},
+title = {Complete and decidable type inference for GADTs},
+year = {2009},
+issue_date = {September 2009},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {44},
+number = {9},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/1631687.1596599},
+doi = {10.1145/1631687.1596599},
+abstract = {GADTs have proven to be an invaluable language extension, for ensuring data invariants and program correctness among others. Unfortunately, they pose a tough problem for type inference: we lose the principal-type property, which is necessary for modular type inference.We present a novel and simplified type inference approach for local type assumptions from GADT pattern matches. Our approach is complete and decidable, while more liberal than previous such approaches.},
+journal = {SIGPLAN Not.},
+month = aug,
+pages = {341–352},
+numpages = {12},
+keywords = {GADTs, Haskell, type inference}
+}
+
+@ARTICLE{leino17,
+  author={M. Leino, K. Rustan},
+  journal={IEEE Software},
+  title={Accessible Software Verification with Dafny},
+  year={2017},
+  volume={34},
+  number={6},
+  pages={94-97},
+  keywords={Formal verification;Software reliability;Software development;Encoding;Cognition;software verification;Dafny;IDE;imperative procedures;lemma proofs;software engineering;software development;Reliable Code},
+  doi={10.1109/MS.2017.4121212}
+}
+
+@article{swamy16,
+author = {Swamy, Nikhil and Hri\c{t}cu, C\u{a}t\u{a}lin and Keller, Chantal and Rastogi, Aseem and Delignat-Lavaud, Antoine and Forest, Simon and Bhargavan, Karthikeyan and Fournet, C\'{e}dric and Strub, Pierre-Yves and Kohlweiss, Markulf and Zinzindohoue, Jean-Karim and Zanella-B\'{e}guelin, Santiago},
+title = {Dependent types and multi-monadic effects in F*},
+year = {2016},
+issue_date = {January 2016},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {51},
+number = {1},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2914770.2837655},
+doi = {10.1145/2914770.2837655},
+abstract = {We present a new, completely redesigned, version of F*, a language that works both as a proof assistant as well as a general-purpose, verification-oriented, effectful programming language. In support of these complementary roles, F* is a dependently typed, higher-order, call-by-value language with _primitive_ effects including state, exceptions, divergence and IO. Although primitive, programmers choose the granularity at which to specify effects by equipping each effect with a monadic, predicate transformer semantics. F* uses this to efficiently compute weakest preconditions and discharges the resulting proof obligations using a combination of SMT solving and manual proofs. Isolated from the effects, the core of F* is a language of pure functions used to write specifications and proof terms---its consistency is maintained by a semantic termination check based on a well-founded order. We evaluate our design on more than 55,000 lines of F* we have authored in the last year, focusing on three main case studies. Showcasing its use as a general-purpose programming language, F* is programmed (but not verified) in F*, and bootstraps in both OCaml and F#. Our experience confirms F*'s pay-as-you-go cost model: writing idiomatic ML-like code with no finer specifications imposes no user burden. As a verification-oriented language, our most significant evaluation of F* is in verifying several key modules in an implementation of the TLS-1.2 protocol standard. For the modules we considered, we are able to prove more properties, with fewer annotations using F* than in a prior verified implementation of TLS-1.2. Finally, as a proof assistant, we discuss our use of F* in mechanizing the metatheory of a range of lambda calculi, starting from the simply typed lambda calculus to System F-omega and even micro-F*, a sizeable fragment of F* itself---these proofs make essential use of F*'s flexible combination of SMT automation and constructive proofs, enabling a tactic-free style of programming and proving at a relatively large scale.},
+journal = {SIGPLAN Not.},
+month = jan,
+pages = {256–270},
+numpages = {15},
+keywords = {verification, proof assistants, effectful programming}
+}
+
+@InProceedings{filli13,
+author="Filli{\^a}tre, Jean-Christophe
+and Paskevich, Andrei",
+editor="Felleisen, Matthias
+and Gardner, Philippa",
+title="Why3 --- Where Programs Meet Provers",
+booktitle="Programming Languages and Systems",
+year="2013",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="125--128",
+abstract="We present Why3, a tool for deductive program verification, and WhyML, its programming and specification language. WhyML is a first-order language with polymorphic types, pattern matching, and inductive predicates. Programs can make use of record types with mutable fields, type invariants, and ghost code. Verification conditions are discharged by Why3 with the help of various existing automated and interactive theorem provers. To keep verification conditions tractable and comprehensible, WhyML imposes a static control of aliases that obviates the use of a memory model. A user can write WhyML programs directly and get correct-by-construction OCaml programs via an automated extraction mechanism. WhyML is also used as an intermediate language for the verification of C, Java, or Ada programs. We demonstrate the benefits of Why3 and WhyML on non-trivial examples of program verification.",
+isbn="978-3-642-37036-6"
+}
+
+@article{breitner18,
+author = {Breitner, Joachim and Spector-Zabusky, Antal and Li, Yao and Rizkallah, Christine and Wiegley, John and Weirich, Stephanie},
+title = {Ready, set, verify! applying hs-to-coq to real-world Haskell code (experience report)},
+year = {2018},
+issue_date = {September 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {2},
+number = {ICFP},
+url = {https://doi.org/10.1145/3236784},
+doi = {10.1145/3236784},
+abstract = {Good tools can bring mechanical verification to programs written in mainstream functional languages. We use <pre>hs-to-coq</pre> to translate significant portions of Haskell’s <pre>containers</pre> library into Coq, and verify it against specifications that we derive from a variety of sources including type class laws, the library’s test suite, and interfaces from Coq’s standard library. Our work shows that it is feasible to verify mature, widely-used, highly optimized, and unmodified Haskell code. We also learn more about the theory of weight-balanced trees, extend <pre>hs-to-coq</pre> to handle partiality, and – since we found no bugs – attest to the superb quality of well-tested functional code.},
+journal = {Proc. ACM Program. Lang.},
+month = jul,
+articleno = {89},
+numpages = {16},
+keywords = {Coq, Haskell, verification}
+}
+
+@InProceedings{bove09,
+author="Bove, Ana
+and Dybjer, Peter
+and Norell, Ulf",
+editor="Berghofer, Stefan
+and Nipkow, Tobias
+and Urban, Christian
+and Wenzel, Makarius",
+title="A Brief Overview of Agda -- A Functional Language with Dependent Types",
+booktitle="Theorem Proving in Higher Order Logics",
+year="2009",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="73--78",
+abstract="We give an overview of Agda, the latest in a series of dependently typed programming languages developed in Gothenburg. Agda is based on Martin-L{\"o}f's intuitionistic type theory but extends it with numerous programming language features. It supports a wide range of inductive data types, including inductive families and inductive-recursive types, with associated flexible pattern-matching. Unlike other proof assistants, Agda is not tactic-based. Instead it has an Emacs-based interface which allows programming by gradual refinement of incomplete type-correct terms.",
+isbn="978-3-642-03359-9"
+}
+
+@misc{carr22,
+      title={An approach to translating Haskell programs to Agda and reasoning about them},
+      author={Harold Carr and Christa Jenkins and Mark Moir and Victor Cacciari Miraldo and Lisandra Silva},
+      year={2022},
+      eprint={2205.08718},
+      archivePrefix={arXiv},
+      primaryClass={cs.LO},
+      url={https://arxiv.org/abs/2205.08718},
+}
+
+@inproceedings{haftmann10,
+author = {Haftmann, Florian},
+title = {From higher-order logic to Haskell: there and back again},
+year = {2010},
+isbn = {9781605587271},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1706356.1706385},
+doi = {10.1145/1706356.1706385},
+abstract = {We present two tools which together allow reasoning about (a substantial subset of) Haskell programs. One is the code generator of the proof assistant Isabelle, which turns specifications formulated in Isabelle's higher-order logic into executable Haskell source text; the other is Haskabelle, a tool to translate programs written in Haskell into Isabelle specifications. The translation from Isabelle to Haskell directly benefits from the rigorous correctness approach of a proof assistant: generated Haskell programs are always partially correct w.r.t. to the specification from which they are generated.},
+booktitle = {Proceedings of the 2010 ACM SIGPLAN Workshop on Partial Evaluation and Program Manipulation},
+pages = {155–158},
+numpages = {4},
+keywords = {code generation, haskell, higher-order logic, isabelle, theorem proving},
+location = {Madrid, Spain},
+series = {PEPM '10}
+}
+
+@article{webbers24,
+author = {Webbers, Robin and von Gleissenthall, Klaus and Jhala, Ranjit},
+title = {Refinement Type Refutations},
+year = {2024},
+issue_date = {October 2024},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {8},
+number = {OOPSLA2},
+url = {https://doi.org/10.1145/3689745},
+doi = {10.1145/3689745},
+abstract = {Refinement types combine SMT decidable constraints with a compositional, syntax-directed type system to provide a convenient way to statically and automatically check properties of programs. However, when type checking fails, programmers must use cryptic error messages that, at best, point out the code location where a subtyping constraint failed to determine the root cause of the failure. In this paper, we introduce refinement type refutations, a new approach to explaining why refinement type checking fails, which mirrors the compositional way in which refinement type checking is carried out. First, we show how to systematically transform standard bidirectional type checking rules to obtain refutations. Second, we extend the approach to account for global constraint-based refinement inference via the notion of a must-instantiation: a set of concrete inhabitants of the types of subterms that suffice to demonstrate why typing fails. Third, we implement our method in HayStack—an extension to LiqidHaskell which automatically finds type-refutations when refinement type checking fails, and helps users understand refutations via an interactive user-interface. Finally, we present an empirical evaluation of HayStack using the regression benchmark-set of LiqidHaskell, and the benchmark set of G2, a previous method that searches for (non-compositional) counterexample traces by symbolically executing Haskell source. We show that HayStack can find refutations for 99.7\% of benchmarks, including those with complex typing constructs (e.g., abstract and bounded refinements, and reflection), and does so, an order of magnitude faster than G2.},
+journal = {Proc. ACM Program. Lang.},
+month = oct,
+articleno = {305},
+numpages = {26},
+keywords = {Counterexamples, Refinement Types, Type Refutations}
+}
+
+@inproceedings{gamboa25,
+author = {Gamboa, Catarina and Reese, Abigail Elena and Fonseca, Alcides and Aldrich, Jonathan},
+title = {Usability Barriers for Liquid Types},
+year = {2025},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3729327},
+doi = {10.1145/3729327},
+abstract = {Liquid types can express richer verification properties than simple type systems. However, despite their advantages, liquid types have yet to achieve widespread adoption. To understand why, we conducted a study analyzing developers' challenges with liquid types, focusing on LiquidHaskell.
+Our findings reveal nine key barriers that span three categories, including developer experience, scalability challenges with complex and large codebases, and understanding the verification process. Together, these obstacles provide a comprehensive view of the usability challenges to the broader adoption of liquid types and offer insights that can inform the current and future design and implementation of liquid type systems.},
+booktitle = {Proceedings of the 46th ACM SIGPLAN International Conference on Programming Language Design and Implementation},
+keywords = {liquid types, usability, liquidhaskell, automated verification, human factors},
+location = {Seoul, South Korea},
+series = {PLDI 2025}
+}
+
+@article{lehmann23,
+author = {Lehmann, Nico and Geller, Adam T. and Vazou, Niki and Jhala, Ranjit},
+title = {Flux: Liquid Types for Rust},
+year = {2023},
+issue_date = {June 2023},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {7},
+number = {PLDI},
+url = {https://doi.org/10.1145/3591283},
+doi = {10.1145/3591283},
+abstract = {We introduce Flux, which shows how logical refinements can work hand in glove with Rust's ownership mechanisms to yield ergonomic type-based verification of low-level pointer manipulating programs. First, we design a novel refined type system for Rust that indexes mutable locations, with pure (immutable) values that can appear in refinements, and then exploits Rust's ownership mechanisms to abstract sub-structural reasoning about locations within Rust's polymorphic type constructors, while supporting strong updates. We formalize the crucial dependency upon Rust's strong aliasing guarantees by exploiting the Stacked Borrows aliasing model to prove that "well-borrowed evaluations of well-typed programs do not get stuck". Second, we implement our type system in Flux, a plug-in to the Rust compiler that exploits the factoring of complex invariants into types and refinements to efficiently synthesize loop annotations-including complex quantified invariants describing the contents of containers-via liquid inference. Third, we evaluate Flux with a benchmark suite of vector manipulating programs and parts of a previously verified secure sandboxing library to demonstrate the advantages of refinement types over program logics as implemented in the state-of-the-art Prusti verifier. While Prusti's more expressive program logic can, in general, verify deep functional correctness specifications, for the lightweight but ubiquitous and important verification use-cases covered by our benchmarks, liquid typing makes verification ergonomic by slashing specification lines by a factor of two, verification time by an order of magnitude, and annotation overhead from up to 24\% of code size (average 14\%), to nothing at all.},
+journal = {Proc. ACM Program. Lang.},
+month = jun,
+articleno = {169},
+numpages = {25},
+keywords = {liquid types, heap-manipulating programs, Rust}
+}
+
+@article{miller91,
+title = {Uniform proofs as a foundation for logic programming},
+journal = {Annals of Pure and Applied Logic},
+volume = {51},
+number = {1},
+pages = {125-157},
+year = {1991},
+issn = {0168-0072},
+doi = {https://doi.org/10.1016/0168-0072(91)90068-W},
+url = {https://www.sciencedirect.com/science/article/pii/016800729190068W},
+author = {Dale Miller and Gopalan Nadathur and Frank Pfenning and Andre Scedrov},
+abstract = {Miller, D., G. Nadathur, F. Pfenning and A. Scedrov, Uniform proofs as a foundation for logic programming, Annals of Pure and Applied Logic 51 (1991) 125–157. A proof-theoretic characterization of logical languages that form suitable bases for Prolog-like programming languages is provided. This characterization is based on the principle that the declarative meaning of a logic program, provided by provability in a logical system, should coincide with its operational meaning, provided by interpreting logical connectives as simple and fixed search instructions. The operational semantics is formalized by the identification of a class of cut-free sequent proofs called uniform proofs. A uniform proof is one that can be found by a goal-directed search that respects the interpretation of the logical connectives as search instructions. The concept of a uniform proof is used to define the notion of an abstract logic programming language, and it is shown that first-order and higher-order Horn clauses with classical provability are examples of such a language. Horn clauses are then generalized to hereditary Harrop formulas and it is shown that first-order and higher-order versions of this new class of formulas are also abstract logic programming languages if the inference rules are those of either intuitionistic or minimal logic. The programming language significance of the various generalizations to first-order Horn clauses is briefly discussed.}
+}
+
+@article{miller91-pattern,
+author = {Miller, Dale},
+title = {A Logic Programming Language with Lambda-Abstraction, Function Variables, and Simple Unification},
+journal = {Journal of Logic and Computation},
+volume = {1},
+number = {4},
+pages = {497-536},
+year = {1991},
+month = {09},
+abstract = {It has been argued elsewhere that a logic programming language with function variables and λ-abstractions within terms makes a good meta-programming language, especially when an object-language contains notions of bound variables and scope. The λProlog logic programming language and the related Elf and Isabelle systems provide meta-programs with both function variables and λ-abstractions by containing implementations of higher order unification. This paper presents a logic programming language, called Lλ, that also contains both function variables and λ-abstractions, although certain restrictions are placed on occurrences of function variables. As a result of these restrictions, an implementation of Lλdoes not need to implement full higher-order unification. Instead, an extension to first-order unification that respects bound variable names and scopes is all that is required. Such unification problems are shown to be decidable and to possess most general unifiers when unifiers exist. A unification algorithm and logic programming interpreter are described and proved correct. Several examples of using Lλ as a meta-programming language are presented.},
+issn = {0955-792X},
+doi = {10.1093/logcom/1.4.497},
+url = {https://doi.org/10.1093/logcom/1.4.497},
+eprint = {https://academic.oup.com/logcom/article-pdf/1/4/497/3817142/1-4-497.pdf},
+}
+
+@article{miller22,
+author="Miller, Dale and Viel, Alexandre",
+title="The undecidability of proof search when equality is a logical connective",
+journal="Annals of Mathematics and Artificial Intelligence",
+year="2022",
+month="May",
+day="01",
+volume="90",
+number="5",
+pages="523--535",
+abstract="One proof-theoretic approach to equality in quantificational logic treats equality as a logical connective: in particular, term equality can be given both left and right introduction rules in a sequent calculus proof system. We present a particular example of this approach to equality in a first-order logic setting in which there are no predicate symbols (apart from equality). After we illustrate some interesting applications of this logic, we show that provability in this logic is undecidable.",
+issn="1573-7470",
+doi="10.1007/s10472-021-09764-0",
+url="https://doi.org/10.1007/s10472-021-09764-0"
+}
+
+@article{ziliani15,
+author = {Ziliani, Beta and Sozeau, Matthieu},
+title = {A unification algorithm for Coq featuring universe polymorphism and overloading},
+year = {2015},
+issue_date = {September 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {50},
+number = {9},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2858949.2784751},
+doi = {10.1145/2858949.2784751},
+abstract = {Unification is a core component of every proof assistant or programming language featuring dependent types. In many cases, it must deal with higher-order problems up to conversion. Since unification in such conditions is undecidable, unification algorithms may include several heuristics to solve common problems. However, when the stack of heuristics grows large, the result and complexity of the algorithm can become unpredictable. Our contributions are twofold: (1) We present a full description of a new unification algorithm for the Calculus of Inductive Constructions (the base logic of Coq), including universe polymorphism, canonical structures (the overloading mechanism baked into Coq's unification), and a small set of useful heuristics. (2) We implemented our algorithm, and tested it on several libraries, providing evidence that the selected set of heuristics suffices for large developments.},
+journal = {SIGPLAN Not.},
+month = aug,
+pages = {179–191},
+numpages = {13},
+keywords = {Coq, Interactive theorem proving, overloading, unification, universe polymorphism}
+}

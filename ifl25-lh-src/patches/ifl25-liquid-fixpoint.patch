@@ -1,0 +1,231 @@
+---
+ src/Language/Fixpoint/Smt/Theories.hs   | 45 ++++++++++++++++++++++++-
+ src/Language/Fixpoint/Types/Names.hs    | 20 +++++++++--
+ src/Language/Fixpoint/Types/Sorts.hs    |  4 +++
+ src/Language/Fixpoint/Types/Theories.hs |  8 ++++-
+ 4 files changed, 72 insertions(+), 5 deletions(-)
+
+diff --git a/src/Language/Fixpoint/Smt/Theories.hs b/src/Language/Fixpoint/Smt/Theories.hs
+index 24f8709b..0fa9ffd4 100644
+--- a/src/Language/Fixpoint/Smt/Theories.hs
++++ b/src/Language/Fixpoint/Smt/Theories.hs
+@@ -259,6 +259,8 @@ solverPreamble cfg
+   ++ boolPreamble cfg
+   ++ arithPreamble cfg
+   ++ stringPreamble cfg
++  ++ optionPreamble cfg
++  ++ intMapSetIntPreamble cfg
+ 
+ type Preamble = (PreambleCondition, Builder)
+ 
+@@ -291,6 +293,22 @@ stringPreamble _
+     , (SAll, bFun' strConcat [fromText string, fromText string] (fromText string))
+     ]
+ 
++optionPreamble :: Config -> [Preamble]
++optionPreamble _
++  = [ (SOnly [Z3, Z3mem], "(declare-datatype Option (par (a) (None (Some (someVal a)))))") ]
++
++
++intMapSetIntPreamble :: Config -> [Preamble]
++intMapSetIntPreamble _ =
++    [ (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_union_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int)) (match oa0 ((None oa1) ((Some _) oa0))))")
++--    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_isSubsetOf_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) Bool (or ((_ is None) oa0) (= oa0 oa1)))")
++--    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_isSubsetOf ((x (Array Int (Option (Set Int)))) (y (Array Int (Option (Set Int))))) Bool (= ((as const (Array Int Bool)) true) ((_ map IntMapSetInt_isSubsetOf_p2p) x y)))")
++    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_difference_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int)) (match oa0 ((None None) ((Some _) (match oa1 ((None oa0) ((Some _) None)))))))")
++    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_difference_strict_p2p ((oa0 (Option (Set Int))) (oa1 (Option (Set Int)))) (Option (Set Int)) (match oa0 ((None None) ((Some a0) (match oa1 ((None oa0) ((Some a1) (ite (= a0 a1) None oa0))))))))")
++    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_isSubsetOf ((x (Array Int (Option (Set Int)))) (y (Array Int (Option (Set Int))))) Bool (= ((as const (Array Int (Option (Set Int)))) None) ((_ map IntMapSetInt_difference_strict_p2p) x y)))")
++    , (SOnly [Z3, Z3mem], "(define-fun IntMapSetInt_keys_p2p ((oa (Option (Set Int)))) Bool ((_ is Some) oa))")
++    ]
++
+ --------------------------------------------------------------------------------
+ -- | Exported API --------------------------------------------------------------
+ --------------------------------------------------------------------------------
+@@ -305,6 +323,7 @@ smt2SmtSort SInt         = "Int"
+ smt2SmtSort SReal        = "Real"
+ smt2SmtSort SBool        = "Bool"
+ smt2SmtSort SString      = fromText string
++smt2SmtSort (SOption a)  = key "Option" (smt2SmtSort a)
+ smt2SmtSort (SSet a)     = key "Set" (smt2SmtSort a)
+ smt2SmtSort (SBag a)     = key "Bag" (smt2SmtSort a)
+ smt2SmtSort (SArray a b) = key2 "Array" (smt2SmtSort a) (smt2SmtSort b)
+@@ -410,11 +429,32 @@ interpSymbols :: SMTSolver -> [(Symbol, TheorySymbol)]
+ --------------------------------------------------------------------------------
+ interpSymbols cfg =
+   [
++    -- options
++    interpSym "None"   "None"  (FAbs 0 $ optionSort (FVar 0))
++  , interpSym "Some"   "Some"  (FAbs 0 $ FFunc (FVar 0) $ optionSort (FVar 0))
++  , interpSym "isSome" "(_ is Some)" $ FAbs 0 $ FFunc (optionSort (FVar 0)) boolSort
++  , interpSym "isNone" "(_ is None)" $ FAbs 0 $ FFunc (optionSort (FVar 0)) boolSort
++  , interpSym "someVal" "someVal" $ FAbs 0 $ FFunc (optionSort (FVar 0)) (FVar 0)
++
+     -- maps
+ 
+-    interpSym mapDef   mapDef  mapDefSort
++  , interpSym mapDef   mapDef  mapDefSort
+   , interpSym mapSel   mapSel  mapSelSort
+   , interpSym mapSto   mapSto  mapStoSort
++  , interpSym "IntMapSetInt_default" "(as const (Array Int (Option (Set Int))))" $
++      FFunc (optionSort (setSort intSort)) intMapSetIntSort
++  , interpSym "IntMapSetInt_select" "select" $
++      FFunc intMapSetIntSort $ FFunc intSort (optionSort (setSort intSort))
++  , interpSym "IntMapSetInt_store" "store" $
++      FFunc intMapSetIntSort $ FFunc intSort $ FFunc (optionSort (setSort intSort)) intMapSetIntSort
++  , interpSym "IntMapSetInt_union" "(_ map IntMapSetInt_union_p2p)" $
++      FFunc intMapSetIntSort $ FFunc intMapSetIntSort intMapSetIntSort
++  , interpSym "IntMapSetInt_difference" "(_ map IntMapSetInt_difference_p2p)" $
++      FFunc intMapSetIntSort $ FFunc intMapSetIntSort intMapSetIntSort
++  , interpSym "IntMapSetInt_isSubsetOf" "IntMapSetInt_isSubsetOf" $
++      FFunc intMapSetIntSort $ FFunc intMapSetIntSort boolSort
++  , interpSym "IntMapSetInt_keys" "(_ map IntMapSetInt_keys_p2p)" $
++      FFunc intMapSetIntSort (setSort intSort)
+ 
+   , interpSym arrConstM  "const"  (FAbs 0 $ FFunc (FVar 1) mapArrSort)
+   , interpSym arrSelectM "select" (FAbs 0 $ FFunc mapArrSort $ FFunc (FVar 0) (FVar 1))
+@@ -554,6 +594,9 @@ interpSymbols cfg =
+     setBopSort = FAbs 0 $ FFunc (setSort $ FVar 0) $ FFunc (setSort $ FVar 0) (setSort $ FVar 0)
+     bagBopSort = FAbs 0 $ FFunc (bagSort $ FVar 0) $ FFunc (bagSort $ FVar 0) (bagSort $ FVar 0)
+ 
++    intMapSetIntSort :: Sort
++    intMapSetIntSort = FTC (symbolFTycon $ dummyLoc intMapSetIntConName)
++
+ bv2i :: SMTSolver -> Int -> Raw
+ bv2i Cvc4 _ = "bv2nat"
+ bv2i Cvc5 _ = "bv2nat"
+diff --git a/src/Language/Fixpoint/Types/Names.hs b/src/Language/Fixpoint/Types/Names.hs
+index 1aa9c7f3..faf77c49 100644
+--- a/src/Language/Fixpoint/Types/Names.hs
++++ b/src/Language/Fixpoint/Types/Names.hs
+@@ -101,10 +101,14 @@ module Language.Fixpoint.Types.Names (
+   , mapConName
+   , bagConName
+   , arrayConName
++  , intMapSetIntConName
++  , optionConName
+   , strConName
+   , charConName
+   , nilName
+   , consName
++  , noneName
++  , someName
+   , vvName
+   , sizeName
+   , bitVecName
+@@ -656,13 +660,15 @@ boolLConName  = "bool"
+ funConName   = "->"
+ 
+ 
+-listConName, listLConName, propConName, _hpropConName, vvName, setConName, mapConName, bagConName, arrayConName:: Symbol
++listConName, listLConName, propConName, _hpropConName, vvName, setConName, mapConName, bagConName, arrayConName, intMapSetIntConName, optionConName :: Symbol
+ listConName  = "[]"
+ listLConName = "List"
+ setConName   = "Set_Set"
+ mapConName   = "Map_t"
+ bagConName   = "Bag_t"
+ arrayConName = "Array_t"
++intMapSetIntConName = "IntMapSetInt_t"
++optionConName = "Option_t"
+ vvName       = "VV"
+ propConName  = "Prop"
+ _hpropConName = "HProp"
+@@ -694,12 +700,13 @@ intbv64Name = "int_to_bv64"
+ bv32intName = "bv32_to_int"
+ bv64intName = "bv64_to_int"
+ 
+-nilName, consName, sizeName, bitVecName :: Symbol
++nilName, consName, sizeName, bitVecName, noneName, someName :: Symbol
+ nilName       = "nil"
+ consName      = "cons"
+ sizeName      = "Size"
+ bitVecName    = "BitVec"
+-
++noneName      = "None"
++someName      = "Some"
+ 
+ mulFuncName, divFuncName :: Symbol
+ mulFuncName  = "SMTLIB_OP_MUL"
+@@ -735,6 +742,8 @@ prims = S.fromList
+   , "Map_union"
+   , "Map_default"
+   , arrayConName
++  , intMapSetIntConName
++  , optionConName
+   -- Currently we parse X in "SizeX" to get the bitvec size
+   -- so there is no finite set of names to add here...
+   -- , size32Name
+@@ -745,6 +754,11 @@ prims = S.fromList
+   , "FAppTy"
+   , nilName
+   , consName
++  , noneName
++  , someName
++  , "isSome"
++  , "isNone"
++  , "someVal"
+   ]
+ 
+ {-
+diff --git a/src/Language/Fixpoint/Types/Sorts.hs b/src/Language/Fixpoint/Types/Sorts.hs
+index 8d119c8d..8c56e734 100644
+--- a/src/Language/Fixpoint/Types/Sorts.hs
++++ b/src/Language/Fixpoint/Types/Sorts.hs
+@@ -41,6 +41,7 @@ module Language.Fixpoint.Types.Sorts (
+   , arraySort
+   , sizedBitVecSort
+   , mapSort, charSort
++  , optionSort
+   , listFTyCon
+   , isListTC
+   , sizeBv
+@@ -575,6 +576,9 @@ arraySort = FApp . FApp (FTC (symbolFTycon' arrayConName))
+ symbolFTycon' :: Symbol -> FTycon
+ symbolFTycon' = symbolFTycon . dummyLoc
+ 
++optionSort :: Sort -> Sort
++optionSort = FApp (FTC (symbolFTycon' optionConName))
++
+ fTyconSort :: FTycon -> Sort
+ fTyconSort c
+   | c == intFTyCon  = FInt
+diff --git a/src/Language/Fixpoint/Types/Theories.hs b/src/Language/Fixpoint/Types/Theories.hs
+index 01a537d8..a80f8724 100644
+--- a/src/Language/Fixpoint/Types/Theories.hs
++++ b/src/Language/Fixpoint/Types/Theories.hs
+@@ -270,6 +270,7 @@ data SmtSort
+   | SBool
+   | SReal
+   | SString
++  | SOption !SmtSort
+   | SSet !SmtSort
+   | SBag !SmtSort
+   | SArray !SmtSort !SmtSort
+@@ -317,6 +318,10 @@ fappSmtSort poly m env = go
+       | bagConName == symbol c   = SBag (sortSmtSort poly env a)
+     go (FTC c) [a, b]
+       | arrayConName == symbol c = SArray (sortSmtSort poly env a) (sortSmtSort poly env b)
++    go (FTC c) []
++      | intMapSetIntConName == symbol c = SArray SInt (SOption (SSet SInt))
++    go (FTC c) [a]
++      | optionConName == symbol c  = SOption (sortSmtSort poly env a)
+     go (FTC bv) [FTC s]
+       | bitVecName == symbol bv
+       , Just n <- sizeBv s      = SBitVec n
+@@ -338,6 +343,7 @@ instance PPrint SmtSort where
+   pprintTidy _ SBool        = text "Bool"
+   pprintTidy _ SReal        = text "Real"
+   pprintTidy _ SString      = text "Str"
++  pprintTidy k (SOption a)  = ppParens k (text "Option") [a]
+   pprintTidy k (SSet a)     = ppParens k (text "Set") [a]
+   pprintTidy k (SBag a)     = ppParens k (text "Bag") [a]
+   pprintTidy k (SArray a b) = ppParens k (text "Array") [a, b]
+@@ -368,4 +374,4 @@ coerceEnv slv env =
+          , seAppls    = seAppls  env
+          , seApplsCur = seApplsCur env
+          , seIx       = seIx     env
+-         }
+\ No newline at end of file
++         }
+-- 
+2.47.2
+

@@ -1,0 +1,30 @@
+---
+ .../src/Language/Haskell/Liquid/WiredIn.hs           | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/liquidhaskell-boot/src/Language/Haskell/Liquid/WiredIn.hs b/liquidhaskell-boot/src/Language/Haskell/Liquid/WiredIn.hs
+index 60084ea7e..7ab53bb48 100644
+--- a/liquidhaskell-boot/src/Language/Haskell/Liquid/WiredIn.hs
++++ b/liquidhaskell-boot/src/Language/Haskell/Liquid/WiredIn.hs
+@@ -123,6 +123,18 @@ wiredTheorySortedSyms =
+       , "Bag_union_max"
+ 
+       , "strLen"
++      , "None"
++      , "Some"
++      , "someVal"
++      , "isNone"
++      , "isSome"
++      , "IntMapSetInt_union"
++      , "IntMapSetInt_difference"
++      , "IntMapSetInt_isSubsetOf"
++      , "IntMapSetInt_select"
++      , "IntMapSetInt_store"
++      , "IntMapSetInt_default"
++      , "IntMapSetInt_keys"
+       ]
+ 
+ --------------------------------------------------------------------------------
+-- 
+2.47.2
+
