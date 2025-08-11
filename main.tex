@@ -144,7 +144,7 @@ Haskell is also usually invoked together with phrases like ``formal methods'' or
 ``verification''~\cite{vazou14,lehmann21,liu20,redmond23}.
 
 Through a case study, we will argue for a future where programming, ordinary
-programming, is made easier and more pleasant thanks to refinements types and
+programming, is made easier and more pleasant thanks to refinement types and
 SMT solvers, even though the technology isn't really ready yet. Our case study
 will be the handling of binders' scopes in compilers. We distill from the experience
 a set of principles that summarize concretely the impact on the programming activity.
@@ -425,8 +425,8 @@ function that we use. So instead, we choose to assume the signature. This is our
 first principle of programming with refinement types:
 
 \begin{principle}
-  In general, refinement types allow to reduce the trusted code base, but they also offer
-    you a choice. When its easier to prove a result by
+  In general, refinement types allow you to reduce the trusted code base, but they also offer
+    you a choice. When it is easier to prove a result by
     hand than with the SMT solver, you can assume the property and
     justify it informally.
 \end{principle}
@@ -454,7 +454,7 @@ data Subst t -- opaque
 {-@ measure domain :: Subst e -> Set Int @-}
 
 assume lookupSubst
-  :: forall <p :: Bool -> Int>.
+  :: forall <p :: Exp -> Bool>.
      s:Subst Exp<p>
   -> {k:Int | member k (domain s)}
   -> Exp<p>
@@ -580,7 +580,7 @@ file \sourcefile{Subst2.hs}.
 This is our next principle for refinement types:
 \begin{principle}
   Refinement types and abstract types are best at enforcing different kind of
-  properties. You should user the simpler solution for each property that you
+  properties. You should use the simpler solution for each property that you
   need, as refinement types and abstract types mix well.
 \end{principle}
 
@@ -1321,7 +1321,7 @@ domain and codomain types, but it's not yet a general solution that can be insta
 domain or codomain type. But our ultimate intent is to upstream these changes. Our
 modifications can be found in the file \patchfile{ifl25-liquidhaskell.patch} and the file \patchfile{ifl25-liquid-fixpoint.patch}.
 
-The theory of finite map is a good example of a theory that Liquid Haskell wants
+The theory of finite maps is a good example of a theory that Liquid Haskell wants
 to support: it is both powerful, and widely applicable. Pragmatically, it's also
 one that is reasonably easy to support with SMT solvers by translating it to
 the theory of arrays.
