@@ -1462,7 +1462,10 @@ Section~\ref{ensuring-the-scope-set-is-checked}.
 When the invariants of a program naturally involve mathematical objects such as
 arithmetic or sets, refinement types are likely to be more approachable,
 requiring less careful a design than coming up with an encoding inside and
-ML-like type system. On the other hand, when a program needs a theory that Liquid
+ML-like type system. Proposing refinement type signatures requires
+determining appropriate invariants for a task, which is a requisite for any static
+checking approach. But it doesn't impose the burden of encoding the invariants with lower-level
+constructs. On the other hand, when a program needs a theory that Liquid
 Haskell, say, does not have support for, it may not be that clear and the program
 author may need to mobilize comparable effort for refinement types as she would
 have for an abstract-type encoding.
