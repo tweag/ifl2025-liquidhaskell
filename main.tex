@@ -231,6 +231,11 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 %       map the variable of the binder to itself.
 \end{enumerate}
 
+These properties are exigent, but do not ensure full correctness.
+It would still be possible for an implementation of substitution to transform the
+input in unspecified ways: e.g. $x\ y$ to $y\ x$. But as anticipated in the
+introduction, we do not concern with full correctness.
+
 \Citeauthor{maclaurin23} propose a library with types \tc{Scope n}, \tc{Name n}, and
 \tc{Name\-Binder n l}. A value of type \tc{Scope n} is a set of names, where
 the type index \tc{n} is the name of the set at the type level. A value of type \tc{Name n} is a name that
