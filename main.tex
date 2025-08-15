@@ -1470,7 +1470,7 @@ Haskell, say, does not have support for, it may not be that clear and the progra
 author may need to mobilize comparable effort for refinement types as she would
 have for an abstract-type encoding.
 
-A type-checker approach, however, is likely to produce error messages that
+\paragraph{Error reporting} A type-checker approach, however, is likely to produce error messages that
 are easier both to understand and to fix, provided that the user goal is feasible.
 The user is guided into correcting the errors
 by the types and the operations of the supporting library. With SMT solvers,
@@ -1556,7 +1556,7 @@ Recursive functions like \tc{skolemize} start with a core
 set of conjuncts that sometimes needs to be grown as static checks reveal the need of
 stronger postconditions for the result of the recursive calls.
 
-Maybe relatedly, the maturity of refinement type checkers in general, and Liquid
+\paragraph{Maturity} Maybe relatedly, the maturity of refinement type checkers in general, and Liquid
 Haskell in particular, is rather lacking still. We have encountered a
 non-negligible number of bugs and usability issues while conducting our
 study. Our source code contains comments explaining the bugs where we were
@@ -1643,15 +1643,7 @@ reducing the number of queries.
 % behavior of the procedures to find instantiations for quantified variables are
 % not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
 
-Other than using an SMT solver in the fashion of Liquid Haskell, F*~\cite{swamy16},
-Why3~\cite{filli13}, or Dafny~\cite{leino17},
-the alternatives to implementing interface checks are either to encode the checks in
-the type-checker, or to migrate to a dependently typed language for the sake of
-static checking~\cite{haftmann10, breitner18, carr22}. Of these alternatives,
-we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
-a fine demonstration about the foil.
-
-Perhaps one of the biggest compromises when encoding properties in the type-checker
+\paragraph{Composability} Perhaps one of the biggest compromises when encoding properties in the type-checker
 is that one needs to narrow the expressible properties to a feasible set that allows
 to write a supporting library. If we wanted to have static checks like those of the
 unification example, we would need new type encodings. Or in other words, new type indices
@@ -1694,6 +1686,32 @@ the unification scopes in the output are those in the input formula and in
 the range of the substitution. We also check that substitution preserves
 the consistency of the unification scopes.
 
+\section{Related approaches}
+
+Liquid Haskell is not the only tool reaching to SMT solvers for static checks.
+F*~\cite{swamy16}, Why3~\cite{filli13}, and Dafny~\cite{leino17} provide
+programming languages with strong static checks, where programs can later
+be extracted for OCaml, F\#, C, Wasm, C\#, Java, JavaScript, Go, or Python
+depending on the tool. F* offers refinement types even.
+
+Liquid Haskell is set apart by the fact that it hooks static checks into an
+existing programming language. There is the  opportunity to gradually introduce
+static checks in projects that are using Haskell already, with a minimum change
+to the tooling. Other than that, some of the discussion in this paper could
+be still illustrated by replacing Liquid Haskell by one of these tools, with
+the caveat that the foil is only implemented in Haskell so far.
+
+There are yet other tools that integrate SMT solvers with existing programming
+languages. Frama-C~\cite{kosmatov24} or ESC/Java~\cite{flanagan02} are examples that
+propose SMT solvers to aid programming in C and Java respectively. However,
+discussing the trade offs between type-checking and SMT solvers becomes possible
+only when considering languages with richer type systems.
+
+If not relying on SMT solvers, the alternatives are either to encode the
+checks in the type-checker, or to migrate to a dependently typed language for the sake of
+static checking~\cite{haftmann10, breitner18, carr22}. Of these alternatives,
+we feel like using the type-checker is among the most pragmatic. Maclaurin et al. make
+a fine demonstration about the foil.
 
 
 \section{Conclusions}
