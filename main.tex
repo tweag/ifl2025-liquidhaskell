@@ -1558,10 +1558,12 @@ stronger postconditions for the result of the recursive calls.
 
 \paragraph{Maturity} Maybe relatedly, the maturity of refinement type checkers in general, and Liquid
 Haskell in particular, is rather lacking still. We have encountered a
-non-negligible number of bugs and usability issues while conducting our
-study. Our source code contains comments explaining the bugs where we were
-affected. Thankfully, none of the bugs that we found look really difficult to
-fix, but they do have a severe impact on user experience in aggregate.
+non-negligible number of bugs (18) in the Liquid Haskell tooling and usability issues
+while conducting our study. Our source code contains comments explaining the defects
+where we were affected.
+The sources of all of these defects seem to locate in the Liquid Haskell
+implementation rather than the SMT solver. Fortunately, none of them look very
+difficult to address, but they do have a severe impact on user experience in aggregate.
 
 Besides, Liquid Haskell lacks support for many standard features of Haskell.
 In our code we have been using the simplest possible style of programming.
