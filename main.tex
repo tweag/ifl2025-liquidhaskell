@@ -406,7 +406,8 @@ straightforward than using the type checker alone. The code presented in this se
 In order to deal with scope checks, we first define a type alias \tc{ScopeExp S},
 that is the type of all
 expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
-Liquid Haskell expects parameter names to start with an uppercase letter.}.
+Liquid Haskell expects parameter names corresponding to terms (i.e. not types) to start with
+an uppercase letter.}.
 
 \begin{verbatim}
 {-@ type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S} @-}
