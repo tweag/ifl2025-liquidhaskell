@@ -403,18 +403,8 @@ requirements from Section~\ref{the-rapier-with-stronger-types} is more
 straightforward than using the type checker alone. The code presented in this section is available in the file
 \sourcefile{Subst1.hs}.
 
-In order to deal with scope checks, we first define a type alias \tc{ScopeExp S},
-that is the type of all
-expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
-Liquid Haskell expects parameter names corresponding to terms (i.e. not types) to start with
-an uppercase letter.}.
-
-\begin{verbatim}
-{-@ type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S} @-}
-\end{verbatim}
-Functions like \tc{isSubsetOf} and \tc{difference} come from the \tc{Data.\allowbreak Set}
-module. The function \tc{freeVars} is in the same module as \tc{subs\-ti\-tute},
-and collects the free variables of an expression. We note that this function
+We define a function \tc{freeVars} in the same module as \tc{subs\-ti\-tute},
+which collects the free variables of an expression. We note that this function
 is only used in refinement type signatures, and in particular, it is not evaluated
 when calling to \tc{substitute}.
 
@@ -483,7 +473,17 @@ Notice that the logical function \tc{domain}, which stands for the set of
 variables that the substitution defines, is uninterpreted. It must be since it is an
 assumption.
 
-We can give now the following signature to \tc{substitute}
+In order to deal with scope checks, we define a type alias \tc{ScopeExp S},
+that is the type of all
+expressions whose free variables are in the set \tc{S}\footnote{In type aliases,
+Liquid Haskell expects parameter names corresponding to terms (i.e. not types) to start with
+an uppercase letter.}.
+
+\begin{verbatim}
+{-@ type ScopedExp S = {e:Exp | isSubsetOf (freeVars e) S} @-}
+\end{verbatim}
+Functions like \tc{isSubsetOf} and \tc{difference} come from the \tc{Data.\allowbreak Set}
+module. We can give now the following signature to \tc{substitute}
 \begin{verbatim}
 {-@
 substitute
