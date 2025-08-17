@@ -145,7 +145,8 @@ Haskell is also usually invoked together with phrases like ``formal methods'' or
 
 Through a case study, we will argue for a future where programming, ordinary
 programming, is made easier and more pleasant thanks to refinement types and
-SMT solvers, even though the technology is not really ready yet. Our case study
+SMT solvers, even though the technology is not ready yet, as we discuss
+in Section~\ref{evaluation}. Our case study
 will be the handling of binders' scopes in compilers. We distill from the experience
 a set of principles that summarize concretely the impact on the programming activity.
 A secondary contribution
@@ -158,8 +159,8 @@ Section~\ref{extending-liquid-haskell}.
 
 Binding scope management is recognized as a persistent annoyance when writing compilers.
 It is easy to get wrong and it is a source of mistakes to the point that many have
-proposed disciplines to prevent mismanagement of scopes, like name capture.
-The poster child is substitution, like in
+proposed disciplines to prevent mismanagement of scopes.
+The canonical mistake example is name capture in substitutions like
 $(\lambda x. y)[y:=t]$. The result of this substitution is $\lambda x. t$.
 Thus $(\lambda x. y)[y:=x]$ is $\lambda x. x$. An easy mistake!
 
@@ -208,6 +209,8 @@ Haskell's type system. A stunt that has often been attempted, but
 \citeauthor{maclaurin23}'s approach, that they name \emph{the foil}, is probably the
 first to succeed at enforcing such invariants without incurring an unreasonable
 amount of boilerplate.
+In Section~\ref{the-rapier-with-refinement-types}, we will argue that we can
+achieve similar guarantees more economically with SMT solvers.
 
 Here is our distillation of the properties that \citeauthor{maclaurin23} set
 out to guarantee (see also \cite[Section~4]{maclaurin23}):
@@ -220,7 +223,7 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 \item When renaming a binder, the occurrences of the old bound variable need
       to be substituted with the new name.
 \item The initial scope set must contain the free variables in the input term
-	  and in the range of the substitution to apply.
+      and in the range of the substitution to apply.
 % \item The binders need to be removed from the domain of the substitution when
 %       they are not in the scope set, otherwise the substitution will happily
 %       replace occurrences of those bound variables! An alternative we use in
@@ -310,7 +313,7 @@ signature checking and a classical type checker:
   \item The checking process consists in generating logical constraints or proof
         obligations which are then fed to an SMT solver, leveraging the powerful
         capabilities of SMT solvers to reason about numbers, arrays, strings,
-		and other sorts.
+        and other sorts.
   \item Signatures are expressed with \emph{refinement types} of the form
         \tc{\{x:b | p\}}, which denote values of base type \tc{b} that
         satisfy predicate \tc{p}. We will write sometimes \tc{b<p>} to denote
@@ -492,14 +495,22 @@ exemplifies how using Liquid Haskell to enforce invariants tends to create less
 boilerplate than a type-based approach.
 
 Figure~\ref{rapier-style-substitution} uses that a substitution
-\begin{verbatim}
-s :: Subst (ScopedExp scope)
-\end{verbatim}
+\tc{s :: Subst (ScopedExp scope)}
 also has (refined) type
+\tc{s :: Subst (ScopedExp (insert i scope))},
+as there are recursive calls like
+\begin{verbatim}
+substitute (insert i scope) (extendSubst s i (Var i))
+\end{verbatim}
+which requires
+\begin{verbatim}
+extendSubst s i (Var i) :: Subst (ScopedExp (insert i scope))
+\end{verbatim}
+which in turn requires
 \begin{verbatim}
 s :: Subst (ScopedExp (insert i scope))
 \end{verbatim}
-This kind of subtyping is trivial with refinement types, it is the default
+This kind of subtyping is trivial with refinement types. It is the default
 behavior. Whereas with an ML type system, subtyping is not a typical feature. The
 foil, for instance, needs an explicit function to cast substitutions when
 extending a scope. This is our next principle:
@@ -521,11 +532,13 @@ naked terms.
 Our refinement type signature of \tc{substitute} follows the type signature of
 \citeauthor{maclaurin23} to the letter.
 Yet we can introduce the following bug in \tc{substitute} from
-Figure~\ref{rapier-style-substitution}:
+Figure~\ref{rapier-style-substitution}, where we omit the fresh binder \tc{j}:
 \begin{verbatim}
   ...
-  | member i scope ->
+  Lam i e
+    | member i scope ->
       Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+    | otherwise -> ...
 \end{verbatim}
 Liquid Haskell flags no errors but the program will still misbehave as
 follows (in pseudo-Haskell).
@@ -1425,7 +1438,7 @@ preamble once and for all queries.
 
 
 \section{Evaluation}
-\label{SMT-solvers-for-interface-checks}\label{limitations-of-liquid-haskell}
+\label{evaluation}
 
 The substitution case study of Section~\ref{capture-avoiding-substitution}
 allows for a direct comparison between type methods and refinement type methods. We
@@ -1586,7 +1599,7 @@ reducing the number of queries.
 % type checker, a non trivial supporting library needs to be written,
 % and the effort might need further iterations when accounting for
 % additional properties.
-% We will return to this latter aspect in Section~\ref{SMT-solvers-for-interface-checks}.
+% We will return to this latter aspect in Section~\ref{evaluation}.
 
 % When the property involves user defined recursive functions,
 % sometimes it still can be proved automatically if it is attached to the
