@@ -758,9 +758,9 @@ $\{x_0,\ldots,x_{n}\}$ is the scope of $f$. Such a pair is akin to a skolem
 function application $f(t_0,\ldots,t_n)$. Notice in particular, how the solution
 of $f$ can only have free variables in $\{x_0,\ldots,x_{n}\}$, but
 $(f, [x_0:=t_0,\ldots,x_n:=t_n])$ may live in a different scope altogether.
-That there is multiple intermingled scopes to manage, rather than one like
-in the case of substitution (Section~\ref{capture-avoiding-substitution})
-is what makes this type of unification problem tricky.
+This type of unification problem is tricky because there are multiple
+intermingled scopes to manage, rather than one like
+in the case of substitution (Section~\ref{capture-avoiding-substitution}).
 
 \begin{verbatim}
 type Var = Int
@@ -791,9 +791,9 @@ This is the same as pattern unification, except that it does not need terms to
 contain functions. The \tc{inverseSubst} function is responsible for this
 inversion.
 
-We are choosing a language of term with both regular variable (representing
+We are choosing a language of term with both regular variables (representing
 variables bound by universal quantifiers), skolem applications representing
-unification variables with their substitutions, as well as sufficient
+unification variables with their substitutions, and sufficient
 constructors to encode arbitrary terms. Here is the concrete type of term, as
 well as that of formula where the only thing to remark is that the left-hand
 side of implications is a single equality.
@@ -880,14 +880,19 @@ inverseSubst (Subst xs) = fmap Subst (go xs)
 The function \tc{unifyEq} defines what a good solution should be.
 One of the conditions is that whatever term \tc{t'} is proposed
 as solution for a skolem \tc{i}, it needs to have as free variables only those in the
-codomain of the substitution defining the skolem application
-(\textit{scope check}). Another
-condition is that the skolem \tc{i} should not occur in the solution
-\tc{t'} (\textit{occurs check}). And since we are inverting a substitution to find
+domain of the substitution defining the skolem application
+(\textit{scope check}). For instance, in $(f_x , [x:=y]) = P(y,y)$,
+$P(x,x)$ is a solution that satisfies the scope check, but $P(x,y)$ would be a solution
+that doesn't since $y$ is not in the domain of $[x:=y]$.
+
+Another condition is that the skolem \tc{i} should not occur in the solution
+\tc{t'} (\textit{occurs check}). For instance, in the previous example
+$f_x:=P(x,f_x)$ is a solution that doesn't pass the occurs check. In addition,
+since we are inverting a substitution to find
 \tc{t'}, we might not find solutions if we cannot invert the
 substitution. This implementation only inverts substitutions where
 variables are mapped to variables. That is, we solve $(f, [z:=x]) = L(L(x))$
-to get the solution $(f, L(L(z)))$ but we do not try solving, say, $(f, [z:=L(x)]) = L(L(x)))$.
+to get the solution $f:=L(L(z))$ but we do not try solving, say, $(f, [z:=L(x)]) = L(L(x)))$.
 
 
 \subsection{A look at skolemization}
@@ -936,7 +941,7 @@ of variables that have been
 introduced with universal quantification, and can appear free in the
 input formula. The finite map \tc{m} contains the variables
 that have been introduced with existential quantification together with their own
-scopes. That is, the universally quantified variables in scope at the original existential
+scopes, that is, the universally quantified variables in scope at the original existential
 binder.
 
 We pass the map \tc{m} as a monadic state, because we do not
