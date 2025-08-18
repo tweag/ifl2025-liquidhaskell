@@ -500,6 +500,20 @@ Figure~\ref{rapier-style-substitution}. This will not always be the case, but th
 exemplifies how using Liquid Haskell to enforce invariants tends to create less
 boilerplate than a type-based approach.
 
+The refinement type signature of \tc{substitute} is a direct translation of the
+Haskell type signature used by the foil.
+\begin{verbatim}
+substitute :: Distinct o => Scope o -> Subst Expr i o -> Expr i -> Expr o
+\end{verbatim}
+The foil's \tc{Scope o} type becomes a
+regular set \tc{scope:Set Int} of names. The foil's \tc{Subst Expr i o} type
+becomes \tc{s:Subst (ScopedExp scope)}, which still requires the free variables
+in the range to be in the \tc{scope} set. The foil's \tc{Expr i} type becomes
+\tc{ScopedExp (domain s)}, which still requires the free variables of the input
+expression to be in the domain of the substitution. And finally, both return types
+\tc{Expr o} and \tc{ScopedExp scope} require the free variables of the output to
+be in the given scope set.
+
 Figure~\ref{rapier-style-substitution} uses that a substitution
 \tc{s :: Subst (ScopedExp scope)}
 also has (refined) type
