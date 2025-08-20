@@ -507,9 +507,10 @@ Haskell type signature used by the foil.
 substitute :: Distinct o => Scope o -> Subst Expr i o -> Expr i -> Expr o
 \end{verbatim}
 The foil's \tc{Scope o} type becomes a
-regular set \tc{scope:Set Int} of names. The foil's \tc{Subst Expr i o} type
-becomes \tc{s:Subst (ScopedExp scope)}, which still requires the free variables
-in the range to be in the \tc{scope} set. The foil's \tc{Expr i} type becomes
+regular set \tc{scope:Set Int} of names, there's no need for the type parameter
+\tc{o}, which the foil uses as a type-level name for the scope, since we can directly refer to \tc{scope} in terms. The foil's \tc{Subst Expr i o} type
+becomes \tc{s:Subst (ScopedExp scope)}, the parameter \tc{i} is omitted and
+referred to as \tc{domain s} instead. The foil's \tc{Expr i} type becomes
 \tc{ScopedExp (domain s)}, which still requires the free variables of the input
 expression to be in the domain of the substitution. And finally, both return types
 \tc{Expr o} and \tc{ScopedExp scope} require the free variables of the output to
