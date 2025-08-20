@@ -231,9 +231,10 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
 %       map the variable of the binder to itself.
 \end{enumerate}
 
-These properties are exigent, but do not ensure full correctness.
-It would still be possible for an implementation of substitution to transform the
-input in unspecified ways: e.g. $x\ y$ to $y\ x$. But as anticipated in the
+These properties are exigent, but do not ensure that we can only write correct
+substitution functions. For instance, with all these properties it's possible
+to write a function which takes $(x\ y)[\tc{x}:=\tc{x}]$ to $(y x)$.
+But as anticipated in the
 introduction, we are not concerned with full correctness.
 
 \Citeauthor{maclaurin23} propose a library with types \tc{Scope n}, \tc{Name n}, and
