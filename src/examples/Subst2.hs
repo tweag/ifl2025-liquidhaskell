@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
 module Subst2 where
 
 import Data.Set hiding (member, union, singleton)
@@ -10,6 +11,7 @@ data Exp
   = Var Int
   | App Exp Exp
   | Lam Int Exp
+  deriving (Show, Eq)
 
 {-@ measure freeVars @-}
 freeVars :: Exp -> Set Int
@@ -110,3 +112,64 @@ substitute scope s e0 = case e0 of
   Lam i e ->
     let (scope', j) = withRefreshed scope i
      in Lam j $ substitute scope' (extendSubst s i (Var j)) e
+
+
+-------------------------------------------
+-- tests
+-------------------------------------------
+
+{-@ idSubst :: scope:Scope -> {v:Subst a | domain v = scope} @-}
+idSubst :: Scope -> Subst a
+idSubst _ = Subst []
+
+{-@ reflect scope01 @-}
+scope01 :: Scope
+scope01 = UnsafeScope (Set.fromList [0, 1])
+
+{-@ testSubst :: _ -> ss:Subst (ScopedExp scope01) -> e:ScopedExp (domain ss) -> _ @-}
+testSubst :: String -> Subst Exp -> Exp -> Exp -> IO ()
+testSubst label ss e expected =
+    if se == expected then
+      putStrLn $ "Test " ++ label ++ " passed"
+    else do
+      putStrLn $ "Test: " ++ label
+      putStrLn "substitute result does not match expected"
+      putStrLn $ "Expected: " ++ show expected
+      putStrLn $ "Got:      " ++ show se
+  where
+    se = substitute scope01 ss e
+
+test1 :: IO ()
+test1 =
+    testSubst "test1" ss
+      (Lam 0 (App (Var 0) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 1)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 0 (Var 0)
+
+test2 :: IO ()
+test2 =
+    testSubst "test2" ss
+      (Lam 0 (App (Var 0) (Var 0)))
+      (Lam 2 (App (Var 2) (Var 2)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 0 (Var 1)
+
+test3 :: IO ()
+test3 =
+    testSubst "test3" ss
+      (Lam 0 (App (Var 0) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 0)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 1 (Var 0)
+
+test4 :: IO ()
+test4 =
+    testSubst "test4" ss
+      (Lam 2 (App (Var 2) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 0)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 1 (Var 0)
+
+test :: IO ()
+test = sequence_ [test1, test2, test3, test4]

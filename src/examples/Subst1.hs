@@ -1,14 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 {-@ LIQUID "--reflection" @-}
+{-@ LIQUID "--ple" @-}
 module Subst1 where
 
-import Data.Set
+import Control.Monad (when)
+import Data.Set as Set
 import Language.Haskell.Liquid.ProofCombinators ((?))
 
 data Exp
   = Var Int
   | App Exp Exp
   | Lam Int Exp
+  deriving (Show, Eq)
 
 {-@ measure freeVars @-}
 freeVars :: Exp -> Set Int
@@ -74,4 +77,65 @@ substitute scope s = \case
         Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
     | otherwise ->
         Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
+
+
+-------------------------------------------
+-- tests
+-------------------------------------------
+
+{-@ idSubst :: scope:Set Int -> {v:Subst a | domain v = scope} @-}
+idSubst :: Set Int -> Subst a
+idSubst scope = Subst []
+
+{-@ reflect scope01 @-}
+scope01 :: Set Int
+scope01 = Set.fromList [0, 1]
+
+{-@ testSubst :: _ -> ss:Subst (ScopedExp scope01) -> e:ScopedExp (domain ss) -> _ @-}
+testSubst :: String -> Subst Exp -> Exp -> Exp -> IO ()
+testSubst label ss e expected =
+    if se == expected then
+      putStrLn $ "Test " ++ label ++ " passed"
+    else do
+      putStrLn $ "Test: " ++ label
+      putStrLn "substitute result does not match expected"
+      putStrLn $ "Expected: " ++ show expected
+      putStrLn $ "Got:      " ++ show se
+  where
+    se = substitute scope01 ss e
+
+test1 :: IO ()
+test1 =
+    testSubst "test1" ss
+      (Lam 0 (App (Var 0) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 1)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 0 (Var 0)
+
+test2 :: IO ()
+test2 =
+    testSubst "test2" ss
+      (Lam 0 (App (Var 0) (Var 0)))
+      (Lam 2 (App (Var 2) (Var 2)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 0 (Var 1)
+
+test3 :: IO ()
+test3 =
+    testSubst "test3" ss
+      (Lam 0 (App (Var 0) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 0)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 1 (Var 0)
+
+test4 :: IO ()
+test4 =
+    testSubst "test4" ss
+      (Lam 2 (App (Var 2) (Var 1)))
+      (Lam 2 (App (Var 2) (Var 0)))
+  where
+    ss = extendSubst (idSubst (singleton 1)) 1 (Var 0)
+
+test :: IO ()
+test = sequence_ [test1, test2, test3, test4]
 
