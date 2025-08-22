@@ -755,9 +755,8 @@ In addition to variables, still represented as integers, we have unification
 variables. Unification variables have their own scopes: the formula
 $\exists x. \forall y. x=y$ does not have a solution. It will be reduced to a
 formula of the form $f_{x} = y$ where $f_{x}$ is a unification variable; we very much
-don't want this unification problem to succeed\improvement{I think we should
-  use a better notation to distinguish unification variables from rigid
-  variables.}: we shall make it so that $y$ is not in the permissible scope for $f_{x}$.
+don't want this unification problem to succeed: we shall make it so that $y$ is not in
+the permissible scope for $f_{x}$.
 
 Furthermore, the unification algorithm will perform substitutions. Substitutions are blocked by
 unification variables as we do not know what they stand for yet. So a unification
