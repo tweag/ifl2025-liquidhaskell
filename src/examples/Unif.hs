@@ -22,9 +22,9 @@ import Language.Haskell.Liquid.ProofCombinators
 import State
 
 -- BUG: The verification time seems to be superlinear on the size of the
--- module at the moment. Unfortunately, name resolution issues still prevent a
--- convenient split. We keep here a list of functions whose checking we can
--- disable to reduce the verification time.
+-- module at the moment. Unfortunately, name resolution issues prevented a
+-- convenient split at the submission time. So we kept here a list of functions
+-- whose checking we can disable to reduce the verification time.
 {-@
 // ignore unify
 // ignore unifyEq
@@ -68,13 +68,6 @@ define intMapIsSubsetOf x y = IntMapSetInt_isSubsetOf x y
 intMapIsSubsetOf :: IntMap (Set Int) -> IntMap (Set Int) -> Bool
 intMapIsSubsetOf _ _ = undefined
 
-{-@ inline mid @-}
-mid :: IntMap (Set Int) -> IntMap (Set Int)
-mid m = m
-
-
-{-@ infixr ++ @-}
-
 -- | We have plain variables
 type Var = Int
 -- | And we have applications of skolem functions for existential variables that
@@ -116,7 +109,9 @@ assume extendSubst
   -> ss:ConsistentScopedSubst s m
   -> i:_
   -> t:ConsistentScopedTerm s m
-  -> {v:ConsistentScopedSubst s m | union (domain ss) (singleton i) = domain v }
+  -> {v:ConsistentScopedSubst s m |
+       Set.union (domain ss) (Set.singleton i) = domain v
+     }
 @-}
 extendSubst
   :: Set Int -> IntMap (Set Int) -> Subst Term -> Var -> Term -> Subst Term
@@ -135,7 +130,7 @@ assume fromListSubst
   -> [(Var, ConsistentScopedTerm s m)]
   -> {v:Subst Term |
           consistentScopesSubst m v
-       && isSubsetOf (freeVarsSubst v) s
+       && Set.isSubsetOf (freeVarsSubst v) s
        && s = domain v
      }
 @-}
@@ -239,25 +234,25 @@ freeVarsSubst (Subst s) = Set.unions $ map (freeVars . snd) s
 skolemAppsSubst :: Subst Term -> Set Int
 skolemAppsSubst (Subst s) = Set.unions $ map (skolemSet . snd) s
 
-{-@ assume freshVar :: s:Set Int -> {v:Int | not (member v s)} @-}
+{-@ assume freshVar :: s:Set Int -> {v:Int | not (Set.member v s)} @-}
 freshVar :: Set Int -> Int
 freshVar s = case Set.lookupMax s of
     Nothing -> 0
     Just i -> i + 1
 
 {-@
-type ScopedTerm S = {t:Term | isSubsetOf (freeVars t) S}
-type ScopedFormula S = {f:Formula | isSubsetOf (freeVarsFormula f) S}
+type ScopedTerm S = {t:Term | Set.isSubsetOf (freeVars t) S}
+type ScopedFormula S = {f:Formula | Set.isSubsetOf (freeVarsFormula f) S}
 type ConsistentScopedFormula S M =
      {f:Formula |
-          isSubsetOf (freeVarsFormula f) S
+          Set.isSubsetOf (freeVarsFormula f) S
        && consistentScopes M f
      }
 type ConsistentScopedTerm S M =
-     {t:Term | isSubsetOf (freeVars t) S && consistentScopesTerm M t}
+     {t:Term | Set.isSubsetOf (freeVars t) S && consistentScopesTerm M t}
 type ConsistentScopedSubst S M =
      {ss:Subst Term |
-           isSubsetOf (freeVarsSubst ss) S
+           Set.isSubsetOf (freeVarsSubst ss) S
         && consistentScopesSubst M ss
      }
 @-}
@@ -430,14 +425,14 @@ assume skolemize
   -> f:ScopedFormula sf
   -> State
        <{\m0 ->
-            isSubsetOf sf (IntMapSetInt_keys m0)
+            Set.isSubsetOf sf (IntMapSetInt_keys m0)
          && consistentScopes m0 f
         }
 
        , {\m0 v m ->
              consistentScopes m v
           && existsCount v = 0
-          && isSubsetOf (freeVarsFormula v) sf
+          && Set.isSubsetOf (freeVarsFormula v) sf
           && intMapIsSubsetOf m0 m
          }>
        _ _
@@ -749,7 +744,7 @@ ignore addSToM
 assume addSToM
   :: s:_
   -> {m:_ | Set.difference (IntMapSetInt_keys m) s = Set.empty}
-  -> {v:_ | intMapIsSubsetOf m v && isSubsetOf s (IntMapSetInt_keys v)}
+  -> {v:_ | intMapIsSubsetOf m v && Set.isSubsetOf s (IntMapSetInt_keys v)}
 @-}
 addSToM :: Set Int -> IntMap (Set Int) -> IntMap (Set Int)
 addSToM s m =
