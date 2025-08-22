@@ -435,6 +435,10 @@ first principle of programming with refinement types:
     justify it informally.
 \end{principle}
 
+In this article, by \emph{trusted code base}, we mean the portion of a
+codebase where the programmer must prove the desired properties
+herself rather than relying on static check to enforce said properties.
+
 It is good discipline to justify systematically why assumptions should hold.
 An incorrect assumption could make Liquid Haskell accept programs that do not
 meet the properties we mean to check. The consequences range through the whole
