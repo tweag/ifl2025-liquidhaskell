@@ -448,10 +448,6 @@ meet the properties we mean to check. The consequences range through the whole
 gamut from incorrect results, to security vulnerabilities and crashes, depending
 on the kind of checks.
 
-That's it, this is the entirety of our trusted code base for this example. For
-the most part, it required thinking about what properties we wanted to enforce,
-but not much about how they ought to be enforced.
-
 Finally, we will take as a parameter a datatype representing substitutions
 (\emph{i.e.} finite maps of variables to terms). To represent this parameter in
 our study we take an abstract type and \tc{assume} the necessary properties that a
@@ -480,6 +476,10 @@ assume extendSubst
 Notice that the logical function \tc{domain}, which stands for the set of
 variables that the substitution defines, is uninterpreted. It must be since it is an
 assumption.
+
+That's it, this is the entirety of our trusted code base for this example. For
+the most part, it required thinking about what properties we wanted to enforce,
+but not much about how they ought to be enforced.
 
 In order to deal with scope checks, we define a type alias \tc{ScopeExp S},
 that is the type of all
