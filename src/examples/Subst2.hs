@@ -118,8 +118,8 @@ substitute scope s e0 = case e0 of
 -- tests
 -------------------------------------------
 
-{-@ idSubst :: scope:Scope -> {v:Subst a | domain v = scope} @-}
-idSubst :: Scope -> Subst a
+{-@ assume idSubst :: scope:Scope -> {v:Subst (ScopedExp scope) | domain v = scope} @-}
+idSubst :: Scope -> Subst Exp
 idSubst _ = Subst []
 
 {-@ reflect scope01 @-}

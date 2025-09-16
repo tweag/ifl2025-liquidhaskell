@@ -118,6 +118,8 @@ extendSubst
 extendSubst _ _ (Subst s) i e = Subst ((i, e) : s)
 
 {-@
+type ScopedVar S = {v:Var | Set.member v S}
+
 // Creates a substitution whose domain includes all variables. Variables
 // that are not in the input list are mapped to themselves.
 // 
@@ -127,7 +129,7 @@ extendSubst _ _ (Subst s) i e = Subst ((i, e) : s)
 assume fromListSubst
   :: s:_
   -> m:_
-  -> [(Var, ConsistentScopedTerm s m)]
+  -> [(ScopedVar s, ConsistentScopedTerm s m)]
   -> {v:Subst Term |
           consistentScopesSubst m v
        && Set.isSubsetOf (freeVarsSubst v) s
@@ -506,7 +508,7 @@ substEq
   -> m:_
   -> t0:ConsistentScopedTerm s m
   -> t1:ConsistentScopedTerm s m
-  -> Maybe [(Var, ConsistentScopedTerm s m)]
+  -> Maybe [(ScopedVar s, ConsistentScopedTerm s m)]
 @-}
 substEq :: Set Int -> IntMap (Set Int) -> Term -> Term -> Maybe [(Var, Term)]
 substEq _ _ (V i) t1 = Just [(i, t1)]

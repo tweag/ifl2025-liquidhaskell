@@ -83,8 +83,8 @@ substitute scope s = \case
 -- tests
 -------------------------------------------
 
-{-@ idSubst :: scope:Set Int -> {v:Subst a | domain v = scope} @-}
-idSubst :: Set Int -> Subst a
+{-@ assume idSubst :: scope:Set Int -> {v:Subst (ScopedExp scope) | domain v = scope} @-}
+idSubst :: Set Int -> Subst Exp
 idSubst scope = Subst []
 
 {-@ reflect scope01 @-}
