@@ -226,11 +226,6 @@ out to guarantee (see also \cite[Section~4]{maclaurin23}):
       to be substituted with the new name.
 \item The initial scope set must contain the free variables in the input term
       and in the range of the substitution to apply.
-% \item The binders need to be removed from the domain of the substitution when
-%       they are not in the scope set, otherwise the substitution will happily
-%       replace occurrences of those bound variables! An alternative we use in
-%       Figure~\ref{rapier-style-substitution} is to redefine the substitution to
-%       map the variable of the binder to itself.
 \end{enumerate}
 
 These properties are exigent, though they do not ensure that we can only write correct
@@ -631,117 +626,10 @@ This is our next principle for refinement types:
   need, as refinement types and abstract types mix well.
 \end{principle}
 
-% The second approach, avoid introducing \tc{withRefreshed} and modifying the
-% types in the program by providing a more stringent refinement type for
-% \tc{substitute}.
-
-% \begin{verbatim}
-% substitute
-%   :: scope:Set Int
-%   -> s:Subst (ScopedExp scope)
-%   -> ei:ScopedExp (domain s)
-%   -> {v:Exp | freeVars v == freeVarsSubst (freeVars ei) s}
-% \end{verbatim}
-
-% In this signature we are spelling exactly what the expected free variables in the result are.
-% We use a function \tc{freeVarsSubst} such that
-% \tc{freeVarsSubst (freeVars e) s} computes the free variables in the range of the
-% substitution \tc{s} that is actually used when applying it
-% to the expression \tc{e}. We provide an example representation for substitutions and
-% a schematic presentation of \tc{freeVarsSubst}, but in our implementation we
-% are careful to keep the checks agnostic on the actual representation of
-% substitutions.
-
-% \begin{verbatim}
-% type Subst e = [(Int, e)]
-% freeVarsSubst :: Set Int -> Subst Exp -> Set Int
-% freeVarsSubst used [] = empty
-% freeVarsSubst used ((i, e) : xs) =
-%   | member i used = -- only take the first occurrence of i
-%       union (freeVars e) (freeVarsSubst (difference used (singleton i)) xs)
-%   | otherwise = freeVarsSubst used xs
-% \end{verbatim}
-
-% Unless we rename all the binders unconditionally, it is no longer
-% possible to ignore the scope set when going under binders since the calculation
-% of free variables doesn't add up:
-% If the name of the binder is in the free variables of the range of the substitution,
-% it may show up in the free variables of the result, but leaving it unrenamed would
-% cause the call to the function \tc{freeVars} in the expected return refinement type
-% to disagree.
-
-% Unfortunately, this refinement type signature is more laborious to check, as
-% \tc{free\-Vars\-Subst} requires roughly one lemma per case of the \tc{subs\-ti\-tute}
-% function.
-
-% \begin{verbatim}
-% lemmaFreeVarsSubstSing :: i:_ -> s:_
-%   -> { freeVarsSubst (singleton i) s == fromMaybe empty (lookupSubst i s) }
-
-% lemmaFreeVarsSubstUnion :: s1:_ -> s2:_ -> s:_
-%   -> { freeVarsSubst (union s1 s2) s
-%          == union (freeVarsSubst s1 s) (freeVarsSubst s2 s) }
-
-% lemmaFreeVarsSubstExtend
-%   :: scope:_ -> used:_
-%   -> i:_ -> {e:_ | Data.Set.null (intersection (freeVars e) scope)}
-%   -> s:Subst (ScopedExp scope)
-%   -> { freeVarsSubst (difference used (singleton i)) s ==
-%        difference (freeVarsSubst used (extendSubst s i e)) (freeVars e)
-%      }
-% \end{verbatim}
-
-% Each lemma requires writing a recursive function for Liquid Haskell to
-% check it, which is additional effort. Here's the proof for
-% \tc{lemma\_free\-Vars\-Subst\_union}.
-
-% \begin{verbatim}
-% lemmaFreeVarsSubstUnion :: Set Int -> Set Int -> Subst Exp -> ()
-% lemmaFreeVarsSubstUnion _ _ [] = ()
-% lemmaFreeVarsSubstUnion s1 s2 ((i, _) : xs) =
-%   lemmaFreeVarsSubstUnion
-%     (difference s1 (singleton i)) (difference s2 (singleton i)) xs
-% \end{verbatim}
-
-% The recursive function follows the structure of an inductive proof,
-% with much of the folding, unfolding, and set properties applied
-% automatically. And this is similar for the proofs of the other lemmas.
-% Then the lemmas need to be applied in the cases of \tc{substitute}.
-
-% \begin{verbatim}
-% substitute scope s e0 = case e0 of
-%   Var i -> case lookupSubst i s of
-%     Nothing -> e0
-%     Just e -> e ? lemmaFreeVarsSubstSing i s
-%   App e0 e1 ->
-%     App (substitute scope s e0) (substitute scope s e1)
-%       ? lemmaFreeVarsSubstUnion (freeVars e0) (freeVars e1) s
-%   Lam i e
-%     | member i scope,
-%       let j = freshVar scope ->
-%         Lam j $ substitute (insert j scope) (extendSubst s i (Var j)) e
-%           ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var j) s
-%     | otherwise ->
-%         Lam i $ substitute (insert i scope) (extendSubst s i (Var i)) e
-%           ? lemmaFreeVarsSubstExtend scope (freeVars e) i (Var i) s
-% \end{verbatim}
-
-% The operator \tc{?} is an alias for function \tc{const = \textbackslash x \_ -> x} and
-% brings the lemma into consideration of Liquid Haskell when checking the
-% first argument without evaluating the recursive function that stands for
-% the lemma proof. This solution is available in the file
-% \tc{Subst3.hs}\footnote{A solution that addresses all requirements without
-%   changing types in the program: \sourcefile{Subst3.hs}}\change{A single Subst
-%   file please}
-% in our repository.
-
-
-
 
 \section{Unification}
 \label{unification}
 
-% hereditary Harrop formulas~\cite{miller91}
 Now that we have established the refined rapier interface, let us show how it
 can be applied to a more realistic example: solving first-order equational
 formulas. Specifically, we will be solving a form of Horn clauses in
@@ -1037,14 +925,6 @@ a bug, so we ended up assuming the refinement type signature
 in keeping with Principle~\ref{assumption-principle}. The rest
 of the code does not benefit less because of it.
 
-% We won't discuss the checking process for this function, as examples follow
-% which  don't require the burden of explaining the mechanisms for
-% checking monadic code. But we do note that all the cases of the function
-% \tc{skolemize} are checked as it appears in Figure~\ref{skolemization},
-% except for the case of existential quantifiers which cause Liquid Haskell
-% to hang at the moment.\unsureF{Such a terrible ending for a great section. It is the SMT solver that seems to be hanging on some query.}
-
-
 \subsection{The theory of \tc{unifyEq}}
 \label{checking-unifyEq}
 
@@ -1112,39 +992,6 @@ Note that compilers typically remove such obviously unused arguments during
 compilation. GHC certainly does. So there is essentially no computational cost to
 these extra arguments anyway.
 
-% We would like to draw the reader's attention to the precondition
-% \begin{verbatim}
-% unionCommutes (scopesTerm t0) (scopesTerm t1)
-% \end{verbatim}
-% The \tc{unionCommutes m1 m2} predicate states that \tc{union m1 m2 = union m2
-%   m1}, which in turn, because \tc{union} is the left-biased union of maps,
-% means that any key defined in both \tc{m1} and \tc{m2} have the same associated
-% value in both. This is the binary version of our
-% \tc{consistent\-SkolemScopesTerm} predicate. The statement is a bit indirect,
-% but that's for a good reason. Since our version of Liquid Haskell understands
-% the theory of finite maps over integers
-% (Section~\ref{extending-liquid-haskell}), this statement is going to
-% be translated to a theory of the SMT solver rather than a complex formula. Which
-% constitutes our next principle.
-%
-% \begin{principle}
-%   SMT solvers are more effective when they can leverage their theories.
-%   Prefer writing refinement types by appealing to theories known by your system.
-% \end{principle}
-%
-% In fact this same expression is used in the definition of
-% \tc{consistent\-SkolemScopesTerm} for the very same reason.
-%
-% \begin{verbatim}
-% consistentSkolemScopesTerm :: Term -> Bool
-% consistentSkolemScopesTerm (V _) = True
-% consistentSkolemScopesTerm SA{} = True
-% consistentSkolemScopesTerm U = True
-% consistentSkolemScopesTerm (L t) = consistentSkolemScopesTerm t
-% consistentSkolemScopesTerm (P t0 t1) =
-%     consistentSkolemScopesTerm t0 && consistentSkolemScopesTerm t1
-%     && unionCommutes (scopesTerm t0) (scopesTerm t1)
-% \end{verbatim}
 
 \subsection{Totality and \tc{unify}}
 \label{checking-unify}
@@ -1194,80 +1041,6 @@ Haskell needs a little help in the form of a termination metric. We use here
 the number of connectives in the argument formula, which is unaffected by
 substitution since we only substitute inside terms.
 
-% The recursion of unify is not structural since in the conjunction and implications
-% cases we are not feeding subformulas. Therefore we provide a termination
-% metric \tc{formulaSize} that counts the amount of connectives in a formula.
-% We have a function \tc{existsCount} that yields the amount of existential
-% quantifiers in a formula.
-% We also define a function \tc{scopes} analogous to \tc{scopesTerm} to obtain the skolems
-% of a formula.
-
-% \begin{verbatim}
-% scopes :: Formula -> IntMap Var (Set Int)
-% scopes (Forall _ f) = scopes f
-% scopes (Exists _ f) = scopes f
-% scopes (Conj f1 f2) = IntMap.union (scopes f1) (scopes f2)
-% scopes (Then (t0, t1) f2) =
-%   IntMap.union (scopesTerm t0) (IntMap.union (scopesTerm t1) (scopes f2))
-% scopes (Eq t0 t1) = IntMap.union (scopesTerm t0) (scopesTerm t1)
-% \end{verbatim}
-
-% We also define the predicate \tc{consistentSkolemScopes}, analogous to
-% \tc{consistentSkolemScopesTerm} which ensures that skolem scopes are
-% consistent in a formula.
-
-% Liquid Haskell can check mostly automatically the refinement type signature of
-% \tc{unify}. In the equations for quantifiers, unfolding definitions of
-% \tc{scopes} plus the refinement type of the recursive calls suffices.
-% In the equation of conjunction, the theory of arrays of the SMT solver
-% kicks in to establish the first conjunct of the refinement type:
-
-% \begin{verbatim}
-% unionCommutes (scopes f1) (scopes f2)
-% =>
-% (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f1)) =>
-%   isSubsetOfJust
-%     (freeVars t)
-%     (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
-% &&
-% (isSubsetOfJust (freeVars t) (IntMap.lookup v (scopes f2)) =>
-%   isSubsetOfJust
-%     (freeVars t)
-%     (IntMap.lookup v (IntMap.union (scopes f1) (scopes f2))))
-% \end{verbatim}
-
-% The antecedent of the above goal is established by \tc{consistent\-Skolem\-Scopes}
-% in the refinement type of the input. The consequent relates the refinement types
-% of the recursive calls to the expected refinement type of the result, as Liquid
-% Haskell knows that \tc{IntMap.\allowbreak union (scopes f1) (scopes f2)} stands for
-% \tc{scopes (Conj f1 f2)}. An additional lemma is also needed to convince Liquid
-% Haskell that \tc{substituteSkolems} is going to preserve \tc{consistentSkolemScopes}.
-% This lemma relates the scopes of a substitution with the scopes in any map.
-% \begin{verbatim}
-% lemmaScopesListSubset
-%   :: m0:IntMap (Set Int)
-%   -> s:[(Var, {t:Term | intMapIsSubsetOf (scopesTerm t) m0})]
-%   -> { intMapIsSubsetOf (scopesList s) m0 }
-% \end{verbatim}
-% Here \tc{scopesList} is a function that collects the skolem scopes in a list of
-% pairs, and the lemma is instantiated with the scopes of the input formula.
-% \begin{verbatim}
-% unify s f@(Conj f1 f2) = do
-%     unifyF1 <- unify s f1
-%     let lemmaSubst = lemmaScopesListSubset (scopes f) unifyF1
-%     unifyF2 <- unify s (substituteSkolems (f2 ? lemmaSubst) unifyF1)
-%     return (unifyF1 ++ unifyF2)
-% \end{verbatim}
-% This lemma helps convince the SMT solver that the union of \tc{scopes f2}
-% and \tc{scopesList unifyF1} commutes, that is the scopes in the arguments of
-% \tc{substituteSkolems}, which is a necessary condition for ensuring that
-% \tc{consistentSkolemScopes} is preserved.
-
-% The second conjunct of the return refinement type of \tc{unify}
-% is accepted as it is established by the recursive calls and \tc{unifyEq}
-% as is. And the other equations in \tc{unify} are checked using similar reasoning,
-% all of it automatic except for a lemma similar to \tc{lemmaScopesListSubset} but
-% for the implication equation.
 
 \subsection{Lemmas in Liquid Haskell}
 \label{sec:lh-lemmas}
@@ -1357,13 +1130,6 @@ vanilla Liquid Haskell. But we lost out on automation: we got more lemmas to pro
 and pass around. Properties like the scope check, or the lemma
 \tc{lemmaConsistentSuperset}, involved operations on finite maps and were more
 convoluted.
-
-% Thus we arrive at the following principle.
-
-% \begin{principle}
-%   SMT solvers are more effective when they can leverage their theories.
-%   Prefer writing refinement types by appealing to theories known by your system.
-% \end{principle}
 
 To support this study, we implemented the theory of finite maps for Liquid
 Haskell. It is not ready to integrate in future release yet, for one thing: we only support finite
@@ -1622,65 +1388,6 @@ SMT solver (3 minutes when checking unification, 4 seconds checking \tc{Subst2.h
 can be improved to approach that of the SMT solver queries, and probably further by
 reducing the number of queries.
 
-% Liquid Haskell ensures most requirements with little assistance
-% because it is delegating much of the work to an underlying SMT solver.
-% SMT solvers are tools that decide whether (usually first order) logic formulas are
-% satisfiable and provide dedicated mechanisms to reason about various theories
-% (sets, strings, arrays, integers, reals, etc).
-
-% In the case of capture-avoiding substitution, multiple queries that
-% Liquid Haskell gives to the SMT solver involve reasoning on sets, thus
-% making effective use of its capabilities. Moreover, the expression of
-% relationships between arguments and result is fairly natural with
-% refinement types. When there are lemmas to prove, despite of being
-% additional effort to write, they still have proofs that don't require
-% a lot of creativity.
-
-% On the other hand, an approach like the foil does need the author to
-% think carefully about how to encode the various static checks with the
-% type checker, a non trivial supporting library needs to be written,
-% and the effort might need further iterations when accounting for
-% additional properties.
-% We will return to this latter aspect in Section~\ref{evaluation}.
-
-% When the property involves user defined recursive functions,
-% sometimes it still can be proved automatically if it is attached to the
-% refinement type signature of the function. This is the case of the refinement
-% types of functions \tc{substitute} and \tc{unification}, where the recursion
-% of the proof supports the inductive reasoning required to established the
-% property.
-
-% When the property cannot be expressed in the signature of a recursive function,
-% like the lemmas that have been presented, writing lemmas becomes necessary. The
-% inconvenience is two-fold. In the one hand, the lemma needs to be precisely
-% written and then demonstrated. And in the other hand, the user needs to figure
-% out the right set of parameters to apply it to at the sites where it is needed.
-
-% These inconveniences are alleviated by the fact that one can still use the
-% SMT solvers to write abbreviated demonstrations of the lemmas. Additionally,
-% it would be plausible that one can rely on additional mechanisms to help
-% discover the parameters to which they are applied. In the case of Liquid
-% Haskell, there is an implementation of automatic rewrite rules~\cite{grannan22}
-% that is meant to address the problem for lemmas about equalities.
-
-% It would be possible to ask the SMT solver to instantiate the lemma parameters
-% as needed by introducing assertions with universal quantification. For instance,
-% the universally quantified lemma \tc{lemma\-FreeVars\-Subst\-Union} follows.
-
-% \begin{verbatim}
-% (assert
-%   (forall
-%     ((s (Subst Term))
-%      (s1 (Set Int))
-%      (s2 (Set Int)))
-%     (freeVarsSubst (union s1 s2) s
-%        == union (freeVarsSubst s1 s) (freeVarsSubst s2 s))))
-% \end{verbatim}
-
-% When checking satisfiability of other assertions, the SMT solver
-% will try to use the universally quantified assertion. Unfortunately, the
-% behavior of the procedures to find instantiations for quantified variables are
-% not easy to predict. This is why Liquid Haskell refrains from doing it~\cite{vazou13}.
 
 \paragraph{Composability} Perhaps one of the biggest compromises when encoding properties in the type-checker
 is that one needs to narrow the expressible properties to a feasible set that allows
@@ -1693,11 +1400,6 @@ $$\begin{array}{l@{\ }l@{\ }l}
                        & \rightarrow  & \mathit{Formula}\ f_1 \ldots f_j \\
                        & \rightarrow  & \mathit{State}\ t_1 \ldots t_k\ (\mathit{Scope}\ e_1 \ldots e_l)\ (\mathit{Formula}\ o_1 \ldots o_m)
 \end{array}$$
-
-% \begin{quotation}
-% $\mathit{skolemize} ::$ $\mathit{Scope}\ s_1 \ldots s_n \rightarrow$ $\mathit{Formula}\ f_1 \ldots f_j \rightarrow$\\
-% $\mathit{State}\ t_1 \ldots t_k\ (\mathit{Scope}\ e_1 \ldots e_l)\ (\mathit{Formula}\ o_1 \ldots o_m)$
-% \end{quotation}
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
