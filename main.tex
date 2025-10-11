@@ -1410,8 +1410,11 @@ $$\begin{array}{l@{\ }l@{\ }l}
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
-is needed. Suppose we started with the static checks to avoid name captures as in
-Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
+is needed.
+
+No such effort is necessary with Liquid Haskell. Suppose we started with the static
+checks to avoid name captures as in Section~\ref{capture-avoiding-substitution}, and we
+wanted to add the scopes checks
 required to deal with unification variables. With refinement types we need to add
 the corresponding conjuncts to the refinement types, and perhaps some \textit{phantom}
 parameter like \tc{m} here.
