@@ -325,8 +325,8 @@ signature checking and a classical type checker:
 
 Refinement types are subject to subtyping in the same way as subsets in set
 theory. Every time we have an expression \tc{e}, the refinement
-type of \tc{e} needs to be a subtype of the refinement type expected by
-the context where \tc{e} appears. For instance, in the following function
+type inferred for \tc{e} needs to be a subtype of the refinement type expected by
+the context in which \tc{e} appears. For instance, in the following function
 \begin{verbatim}
 {-@ f :: {x:Int | x > 1} -> {x:Int | x > 0} @-}
 f :: Int -> Int
