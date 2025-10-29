@@ -333,9 +333,15 @@ f :: Int -> Int
 f x = x
 \end{verbatim}
 the refinement type of the occurrence of \tc{x} in the right hand side
-needs to be a subtype of the return refinement type of function \tc{f}. And
-similarly, in an application \tc{f y}, the refinement type of \tc{y} needs
-to be a subtype of the refinement type of the formal parameter of \tc{f}.
+needs to be a subtype of the return refinement type of function \tc{f}.
+
+Similarly, in an application \tc{f y}, the refinement type of \tc{y} needs
+to be a subtype of the refinement type of the parameter of \tc{f}:
+\begin{verbatim}
+{-@ g :: {x:Int | x > 2} -> {x:Int | x > 0} @-}
+g :: Int -> Int
+g y = f y
+\end{verbatim}
 
 Liquid Haskell reads refinement type signatures and other annotations from
 inside special Haskell comments
