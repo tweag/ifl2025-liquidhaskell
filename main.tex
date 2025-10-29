@@ -321,14 +321,27 @@ signature checking and a classical type checker:
         \tc{\{x:b | p\}}, which denote values of base type \tc{b} that
         satisfy predicate \tc{p}. We will write sometimes \tc{b<p>} to denote
         \tc{\{x:b | p x\}}.
-Refinements are subject to subtyping in the same way as subsets in set
-theory, so that we have
+\end{itemize}
+
+Refinement types are subject to subtyping in the same way as subsets in set
+theory. Every time we have an expression \tc{e}, the refinement
+type inferred for \tc{e} needs to be a subtype of the refinement type expected by
+the context in which \tc{e} appears. For instance, in the following function
 \begin{verbatim}
 {-@ f :: {x:Int | x > 1} -> {x:Int | x > 0} @-}
 f :: Int -> Int
 f x = x
 \end{verbatim}
-\end{itemize}
+the refinement type of the occurrence of \tc{x} in the right hand side
+needs to be a subtype of the return refinement type of function \tc{f}.
+
+Similarly, in an application \tc{f y}, the refinement type of \tc{y} needs
+to be a subtype of the refinement type of the parameter of \tc{f}:
+\begin{verbatim}
+{-@ g :: {x:Int | x > 2} -> {x:Int | x > 0} @-}
+g :: Int -> Int
+g y = f y
+\end{verbatim}
 
 Liquid Haskell reads refinement type signatures and other annotations from
 inside special Haskell comments
@@ -1403,8 +1416,11 @@ $$\begin{array}{l@{\ }l@{\ }l}
 
 Then there would be the effort of writing a library, and later on there would be the
 effort of composing the encodings of different libraries when more than one such
-is needed. Suppose we started with the static checks to avoid name captures as in
-Section~\ref{capture-avoiding-substitution}, and we wanted to add the scopes checks
+is needed.
+
+No such effort is necessary with Liquid Haskell. Suppose we started with the static
+checks to avoid name captures as in Section~\ref{capture-avoiding-substitution}, and we
+wanted to add the scope checks
 required to deal with unification variables. With refinement types we need to add
 the corresponding conjuncts to the refinement types, and perhaps some \textit{phantom}
 parameter like \tc{m} here.
